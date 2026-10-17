@@ -1,0 +1,11 @@
+node_modules/
+*.mp4
+*.gif
+!examples/explainer/assets/*.mp4
+build/
+.DS_Store
+data/
+.env
+packages/editor/dist/
+**/__pycache__/
+!docs/assets/*.gif

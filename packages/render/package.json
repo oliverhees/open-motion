@@ -1,0 +1,22 @@
+{
+  "name": "@openmotion/render",
+  "version": "0.1.0",
+  "description": "Builds HyperFrames compositions from a Motion-Spec and renders MP4/GIF. Includes the openmotion CLI.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "openmotion": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@openmotion/core": "0.1.0",
+    "hyperframes": "0.8.106"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oliverhees/open-motion.git",
+    "directory": "packages/render"
+  }
+}

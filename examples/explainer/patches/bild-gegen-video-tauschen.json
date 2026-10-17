@@ -1,0 +1,3 @@
+[
+  { "op": "swap", "id": "s3-bild", "content": { "type": "video", "src": "assets/facecam.mp4", "fit": "cover", "radius": 28, "mediaStart": 2, "muted": true } }
+]

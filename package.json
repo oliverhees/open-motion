@@ -1,0 +1,35 @@
+{
+  "name": "openmotion",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OpenMotion: code-based motion graphics where every element is a live-editable layer.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node packages/server/src/main.ts",
+    "editor:build": "npm run build -w @openmotion/editor",
+    "editor:dev": "npm run dev -w @openmotion/editor",
+    "test": "node --test --test-force-exit packages/core/test/*.test.ts packages/render/test/*.test.ts packages/server/test/*.test.ts",
+    "smoke": "node scripts/smoke-editor.ts",
+    "smoke:media": "node scripts/smoke-media.ts",
+    "smoke:cut": "node scripts/smoke-cut.ts",
+    "smoke:ai": "node scripts/smoke-ai.ts",
+    "check:keys": "node scripts/check-keys.ts",
+    "e2e:roles": "node scripts/e2e-roles.ts",
+    "start:debug": "OPENMOTION_DEBUG=1 node packages/server/src/main.ts",
+    "example:assets": "python3 examples/explainer/make_assets.py",
+    "example:render": "node packages/render/src/cli.ts render examples/explainer/spec.json -o examples/explainer/explainer.mp4 --height 720 --quality medium"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oliverhees/open-motion.git"
+  },
+  "author": "Oliver Hees – Der Aiianer (https://aiianer.de)",
+  "homepage": "https://github.com/oliverhees/open-motion"
+}

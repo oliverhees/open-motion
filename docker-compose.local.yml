@@ -1,0 +1,9 @@
+# Local test on your machine:
+#   OPENMOTION_PASSWORD=dein-passwort docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#   → http://localhost:4317
+services:
+  app:
+    ports:
+      - "4317:4317"
+    environment:
+      OPENMOTION_COOKIE_SECURE: "0"

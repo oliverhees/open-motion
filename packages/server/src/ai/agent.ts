@@ -1,0 +1,193 @@
+import { httpFetch } from "../http.ts";
+// The OpenMotion agent. It never writes free code: it answers with patch operations
+// that the core validates. Invalid answers go back to the model with the exact error (max 2 retries).
+// Image wishes come as  src: "ai:<prompt>"  and are generated only after the patch is valid.
+
+import { applyPatch, describe, isWordCut, sceneTimings, sourceToComp, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import type { Settings } from "../settings.ts";
+import { complete, extractJson, type Fetch, type Msg } from "./llm.ts";
+import { aspectFor, generateImage } from "./images.ts";
+
+export type AgentKind = "chat" | "comment" | "transcript";
+
+export interface AgentRequest {
+  kind: AgentKind;
+  spec: MotionSpec;
+  /** Chat history incl. the new user message last. */
+  messages?: { role: "user" | "assistant"; text: string }[];
+  comment?: { t: number; layer?: string; text: string };
+  selection?: string | null;
+  t?: number;
+  maxLayers?: number;
+}
+
+export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number }
+
+const MAX_IMAGES = 4;
+
+export async function runAgent(req: AgentRequest, ctx: { settings: Settings; projectDir: string; fetch?: Fetch }): Promise<AgentResult> {
+  const f = ctx.fetch ?? httpFetch;
+  const system = systemPrompt(req.spec);
+  const convo: Msg[] = [...history(req), { role: "user", content: `${context(req)}\n\n${task(req)}` }];
+  let lastError = "";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const text = process.env.OPENMOTION_FAKE_AI === "1" ? fakeAnswer(req) : await complete(ctx.settings, system, convo, f);
+    let out: { message?: unknown; ops?: unknown };
+    try {
+      out = extractJson(text) as typeof out;
+      if (!Array.isArray(out.ops)) throw new Error('Feld "ops" fehlt oder ist kein Array.');
+      const ops = out.ops as PatchOp[];
+      const check = applyPatch(req.spec, ops);
+      const images = await resolveImages(ops, req.spec, ctx, f);
+      return { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt };
+    } catch (e) {
+      lastError = (e as Error).message;
+      if (/API-Key|antwortet mit|Kie\.ai|Gemini|OpenRouter: |Bild/.test(lastError) && !/Patch op|Invalid Motion-Spec|JSON/.test(lastError)) throw e;
+      convo.push({ role: "assistant", content: text.slice(0, 20000) });
+      convo.push({ role: "user", content: `Deine Antwort war ungültig:\n${lastError.slice(0, 3000)}\n\nKorrigiere sie. Antworte wieder nur mit dem JSON-Objekt {"message": …, "ops": […]}.` });
+    }
+  }
+  throw new Error(`Die KI hat nach 3 Versuchen keine gültige Änderung geliefert. Letzter Fehler: ${lastError.slice(0, 600)}`);
+}
+
+/** Replaces every "ai:<prompt>" src with a generated, locally saved image. */
+async function resolveImages(ops: PatchOp[], spec: MotionSpec, ctx: { settings: Settings; projectDir: string }, f: Fetch): Promise<string[]> {
+  const wanted: { set: (src: string, prompt: string, model: string) => void; prompt: string; w: number; h: number }[] = [];
+  const frameOf = (id: string) => {
+    const l = spec.layers.find((x) => x.id === id);
+    return l && l.type !== "audio" ? l.frame : { w: 1600, h: 900 };
+  };
+  for (const op of ops) {
+    const o = op as unknown as Record<string, any>;
+    if (o.op === "add" && typeof o.layer?.src === "string" && o.layer.src.startsWith("ai:")) {
+      wanted.push({ prompt: o.layer.src.slice(3).trim(), w: o.layer.frame?.w ?? 1600, h: o.layer.frame?.h ?? 900, set: (src, prompt, model) => { o.layer.src = src; o.layer.source = { kind: "ai", prompt, model }; } });
+    } else if ((o.op === "swap" || o.op === "replace") && typeof (o.content ?? o.layer)?.src === "string" && (o.content ?? o.layer).src.startsWith("ai:")) {
+      const c = o.content ?? o.layer;
+      const fr = c.frame ?? frameOf(o.id);
+      wanted.push({ prompt: c.src.slice(3).trim(), w: fr.w, h: fr.h, set: (src, prompt, model) => { c.src = src; c.source = { kind: "ai", prompt, model }; } });
+    } else if (o.op === "set" && o.path === "src" && typeof o.value === "string" && o.value.startsWith("ai:")) {
+      const fr = frameOf(o.id);
+      wanted.push({ prompt: o.value.slice(3).trim(), w: fr.w, h: fr.h, set: (src) => { o.value = src; } });
+    }
+  }
+  if (wanted.length > MAX_IMAGES) throw new Error(`Patch op: höchstens ${MAX_IMAGES} KI-Bilder pro Antwort (angefragt: ${wanted.length}).`);
+  const out: string[] = [];
+  for (const wnt of wanted) {
+    if (!wnt.prompt) throw new Error('Patch op: "ai:" ohne Bild-Prompt.');
+    const img = process.env.OPENMOTION_FAKE_AI === "1"
+      ? await fakeImage(ctx.projectDir)
+      : await generateImage(ctx.settings, wnt.prompt, aspectFor(wnt.w, wnt.h), ctx.projectDir, f);
+    wnt.set(img.path, wnt.prompt, `${img.provider}:${img.model}`);
+    out.push(img.path);
+  }
+  return out;
+}
+
+function history(req: AgentRequest): Msg[] {
+  if (req.kind !== "chat" || !req.messages?.length) return [];
+  return req.messages.slice(-11, -1).map((m) => ({ role: m.role, content: m.text.slice(0, 4000) }));
+}
+
+function context(req: AgentRequest): string {
+  const s = req.spec;
+  const parts = [`PROJEKT\n${describe(s)}`];
+  const scenes = sceneTimings(s);
+  if (s.scenes.length) parts.push(`SZENEN (absolute Zeiten): ${s.scenes.map((x) => `${x.id} ${r(scenes.get(x.id)!.start)}–${r(scenes.get(x.id)!.end)}s`).join(", ")}`);
+  if (s.transcript?.words.length) {
+    const words = s.transcript.words.filter((w) => !isWordCut(s.transcript!, w.id)).slice(0, 900);
+    parts.push(`GESAGTES (Wort-id@Sekunde im Video, geschnittene Wörter fehlen):\n${words.map((w) => `${w.id}@${r(sourceToComp(s, w.t0))} ${w.text}`).join(" ")}`);
+  }
+  const sel = req.kind === "comment" ? req.comment?.layer : req.selection;
+  const layer = sel ? s.layers.find((l) => l.id === sel) : undefined;
+  if (layer) parts.push(`AUSGEWÄHLTE EBENE (vollständig):\n${JSON.stringify(layer)}`);
+  if (typeof req.t === "number") parts.push(`ABSPIELKOPF: ${r(req.t)} s`);
+  return parts.join("\n\n");
+}
+
+function task(req: AgentRequest): string {
+  if (req.kind === "comment") {
+    const c = req.comment!;
+    return `AUFGABE: Kommentar bei ${r(c.t)} s${c.layer ? ` zur Ebene "${c.layer}"` : ""}: "${c.text}"\nSetze genau das um. Ändere nur ${c.layer ? `die Ebene "${c.layer}"` : "das Nötigste"}, alles andere bleibt, wie es ist.`;
+  }
+  if (req.kind === "transcript") {
+    return `AUFGABE: Erzeuge Motion Graphics zum Gesagten. Pro Kernaussage ein kurzer Titel oder ein Stichwort, wo es passt eine gezeichnete SVG-Grafik. Verankere jede neue Ebene per "anchor" am passenden Wort (offset ca. -0.2). Lass die Facecam frei, platziere Grafiken daneben. Höchstens ${req.maxLayers ?? 8} neue Ebenen. Lösche nichts.`;
+  }
+  const last = req.messages?.[req.messages.length - 1]?.text ?? "";
+  return `AUFGABE (Nachricht vom Nutzer): ${last}`;
+}
+
+export function systemPrompt(spec: MotionSpec): string {
+  const lang = spec.meta.lang?.startsWith("en") ? "English" : "Deutsch";
+  const { width: W, height: H, fps } = spec.canvas;
+  const palette = Object.keys(spec.style?.palette ?? {}).map((k) => `$${k}`).join(", ") || "(keine, nutze Hex-Farben)";
+  return `Du bist der Motion-Designer von OpenMotion. Du änderst Videos AUSSCHLIESSLICH über Patch-Operationen auf eine Motion-Spec.
+
+ANTWORTFORMAT: nur dieses JSON, nichts davor oder danach:
+{"message": "1–2 kurze Sätze auf ${lang}, was du geändert hast", "ops": [ … ]}
+
+REGELN
+- Ändere nur, was verlangt ist. Bestehende Ebenen behalten ihre id.
+- Neue ids: Kleinbuchstaben, Ziffern, Bindestriche; beginnen mit einem Buchstaben; eindeutig.
+- Leinwand ${W}×${H} px, ${fps} fps. Zeiten in Sekunden. Abstand zum Rand mind. 80 px.
+- Farben aus der Palette (${palette}) als "$name". Schrift groß, Text kurz.
+- "track" = Stapelreihenfolge (höher = oben). Facecam liegt meist ganz oben, überdecke sie nicht.
+- Ebenen in einer Szene: "scene": "<id>" + "start" relativ zur Szene. Ebenen zum Gesagten: "anchor": {"word": "<wort-id>", "offset": -0.2}.
+- Gezeichnete Grafik = "svg"-Ebene: nur innerer SVG-Code ohne <svg>-Hülle, passendes "viewBox", Farben per style="fill:$accent". Keine Skripte, keine externen Bilder. Flache, klare Formen.
+- Foto/Illustration, die man nicht zeichnen kann: Bild-Ebene mit "src": "ai:<ausführlicher Bild-Prompt auf Englisch>". Höchstens ${MAX_IMAGES} pro Antwort.
+- Animation über "in"/"out" (fade, slideUp, slideDown, slideLeft, slideRight, pop, wipe, blur) und "keys".
+
+EBENEN (gemeinsam: id, name, type, track, start, duration, scene?, anchor?, frame{x,y,w,h,rotation?,scale?,opacity?}, keys?, in?, out?)
+- text: text, style{fontSize, fontWeight?, color?, align?("left"|"center"|"right"), valign?("top"|"middle"|"bottom"), lineHeight?, letterSpacing?, background?, padding?, radius?, uppercase?}
+- shape: shape("rect"|"ellipse"), fill?, stroke?, strokeWidth?, radius?
+- svg: svg, viewBox
+- image: src, fit?("cover"|"contain"), radius?
+- video: src, fit?, radius?, muted?, mediaStart?
+- audio (ohne frame): src, volume?
+keys: {"y":[{"t":0,"v":600},{"t":0.8,"v":520,"ease":"power3.out"}]}  t relativ zum Ebenen-Start; animierbar: x,y,w,h,rotation,scale,opacity.
+Eases: linear, power1–4.(in|out|inOut), sine.*, expo.*, circ.*, back.(in|out|inOut).
+
+OPERATIONEN
+{"op":"add","layer":{…}}
+{"op":"set","id":"…","path":"style.color","value":"$accent"}   (Punkt-Pfad, value null löscht)
+{"op":"replace","id":"…","layer":{… ohne id …}}                 (z. B. Grafik neu zeichnen)
+{"op":"swap","id":"…","content":{"type":"image","src":"ai:…"}}   (Inhalt tauschen, Rahmen und Zeit bleiben)
+{"op":"remove","id":"…"}
+{"op":"setAt","id":"…","prop":"x","t":3.2,"value":500,"key":true}  (ab Zeitpunkt animieren)
+{"op":"addScene","scene":{"id":"s4","name":"…","duration":4}}   {"op":"scene","id":"s1","set":{"duration":5}}
+{"op":"style","set":{"palette":{…}}}   {"op":"canvas","set":{"background":"$bg"}}`;
+}
+
+// ---------- Test mode (OPENMOTION_FAKE_AI=1): deterministic answers, no network ----------
+function fakeAnswer(req: AgentRequest): string {
+  const s = req.spec;
+  const taken = new Set(s.layers.map((l) => l.id));
+  const id = (base: string) => { let c = base; for (let i = 2; taken.has(c); i++) c = `${base}-${i}`; return c; };
+  const W = s.canvas.width, H = s.canvas.height;
+  const top = Math.max(0, ...s.layers.filter((l) => l.type !== "video").map((l) => l.track));
+  if (req.kind === "comment") {
+    const target = req.comment?.layer && s.layers.find((l) => l.id === req.comment!.layer && l.type !== "audio");
+    if (!target) return JSON.stringify({ message: "Testmodus: Kein Element am Kommentar, nichts geändert.", ops: [] });
+    return JSON.stringify({ message: `Testmodus: „${target.name ?? target.id}" leicht gedreht.`, ops: [{ op: "set", id: target.id, path: "frame.rotation", value: 6 }] });
+  }
+  if (req.kind === "transcript") {
+    const w = s.transcript?.words[Math.min(2, (s.transcript?.words.length ?? 1) - 1)];
+    if (!w) return JSON.stringify({ message: "Testmodus: Kein Transkript.", ops: [] });
+    return JSON.stringify({ message: "Testmodus: Ein Stichwort am Wort verankert.", ops: [{ op: "add", layer: { id: id("ki-stichwort"), name: "KI-Stichwort", type: "text", track: top + 1, start: 0, duration: 2.5, anchor: { word: w.id, offset: -0.2 }, frame: { x: 120, y: 120, w: 900, h: 140 }, text: w.text.toUpperCase(), style: { fontSize: 96, fontWeight: 800, color: "#ffffff" }, in: { type: "pop" }, out: { type: "fade" } } }] });
+  }
+  const msg = (req.messages?.[req.messages.length - 1]?.text ?? "Hallo").slice(0, 40);
+  const ops: unknown[] = [{ op: "add", layer: { id: id("ki-text"), name: "KI-Text", type: "text", track: top + 1, start: 0, duration: 4, frame: { x: 160, y: H - 260, w: W - 320, h: 140 }, text: msg, style: { fontSize: 72, fontWeight: 800, color: "#ffffff", align: "center", valign: "middle", background: "#00000099", padding: 16, radius: 16 }, in: { type: "slideUp" }, out: { type: "fade" } } }];
+  if (/bild|image/i.test(msg)) ops.push({ op: "add", layer: { id: id("ki-bild"), name: "KI-Bild", type: "image", track: top + 2, start: 0, duration: 4, frame: { x: 160, y: 120, w: 640, h: 360 }, src: "ai:test image of a mountain lake", radius: 16, in: { type: "pop" } } });
+  return JSON.stringify({ message: `Testmodus: Text „${msg}" eingefügt.`, ops });
+}
+
+export async function fakeImage(projectDir: string) {
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP4z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==", "base64");
+  await mkdir(path.join(projectDir, "assets", "images"), { recursive: true });
+  const name = `ki-test-${Date.now().toString(36)}.png`;
+  await writeFile(path.join(projectDir, "assets", "images", name), png);
+  return { path: `assets/images/${name}`, provider: "kie" as const, model: "fake", bytes: png.length };
+}
+
+const r = (v: number) => Math.round(v * 100) / 100;

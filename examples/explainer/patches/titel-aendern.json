@@ -1,0 +1,4 @@
+[
+  { "op": "set", "id": "s1-title", "path": "text", "value": "Schnitt-Software\nist von gestern." },
+  { "op": "set", "id": "s1-title", "path": "style.color", "value": "$accent" }
+]

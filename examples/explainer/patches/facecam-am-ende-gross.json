@@ -1,0 +1,10 @@
+[
+  { "op": "setAt", "id": "cam", "prop": "x", "t": 11.6, "value": 1493 },
+  { "op": "setAt", "id": "cam", "prop": "y", "t": 11.6, "value": 730 },
+  { "op": "setAt", "id": "cam", "prop": "w", "t": 11.6, "value": 384 },
+  { "op": "setAt", "id": "cam", "prop": "h", "t": 11.6, "value": 307 },
+  { "op": "setAt", "id": "cam", "prop": "x", "t": 12.3, "value": 1037, "ease": "power3.inOut" },
+  { "op": "setAt", "id": "cam", "prop": "y", "t": 12.3, "value": 129, "ease": "power3.inOut" },
+  { "op": "setAt", "id": "cam", "prop": "w", "t": 12.3, "value": 806, "ease": "power3.inOut" },
+  { "op": "setAt", "id": "cam", "prop": "h", "t": 12.3, "value": 822, "ease": "power3.inOut" }
+]

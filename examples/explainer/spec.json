@@ -1,0 +1,672 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "Open Motion – the layer system in 13 seconds",
+    "lang": "en"
+  },
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "background": "$bg"
+  },
+  "style": {
+    "palette": {
+      "bg": "#0F1E33",
+      "panel": "#1B355A",
+      "soft": "#8FA7CC",
+      "ink": "#F6F7FB",
+      "accent": "#F97216"
+    },
+    "fonts": [
+      {
+        "family": "Bricolage Grotesque",
+        "src": "assets/fonts/bricolage-grotesque-latin.woff2",
+        "weight": "200 800"
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "The problem",
+      "duration": 4.2
+    },
+    {
+      "id": "s2",
+      "name": "The idea",
+      "duration": 4.4
+    },
+    {
+      "id": "s3",
+      "name": "Live editable",
+      "duration": 4.4
+    }
+  ],
+  "layers": [
+    {
+      "id": "bg",
+      "name": "Background",
+      "type": "shape",
+      "shape": "rect",
+      "track": 0,
+      "start": 0,
+      "duration": 13,
+      "locked": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "fill": "$bg"
+    },
+    {
+      "id": "dots",
+      "name": "Dot grid",
+      "type": "svg",
+      "track": 1,
+      "start": 0,
+      "duration": 13,
+      "locked": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080,
+        "opacity": 0.7
+      },
+      "viewBox": "0 0 1920 1080",
+      "svg": "<defs><pattern id=\"om-dots\" width=\"48\" height=\"48\" patternUnits=\"userSpaceOnUse\"><circle cx=\"3\" cy=\"3\" r=\"2.2\" style=\"fill:$panel\"/></pattern></defs><rect width=\"1920\" height=\"1080\" fill=\"url(#om-dots)\"/>",
+      "in": {
+        "type": "fade",
+        "duration": 1.2
+      }
+    },
+    {
+      "id": "s1-kicker",
+      "name": "Chapter",
+      "type": "text",
+      "scene": "s1",
+      "track": 5,
+      "start": 0.1,
+      "duration": 4.0,
+      "frame": {
+        "x": 120,
+        "y": 92,
+        "w": 800,
+        "h": 48
+      },
+      "text": "Chapter 1: The problem",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 30,
+        "fontWeight": 600,
+        "color": "$accent"
+      },
+      "in": {
+        "type": "fade",
+        "duration": 0.5
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s1-title",
+      "name": "Title",
+      "type": "text",
+      "scene": "s1",
+      "track": 6,
+      "start": 0.3,
+      "duration": 3.8,
+      "frame": {
+        "x": 120,
+        "y": 150,
+        "w": 900,
+        "h": 320
+      },
+      "text": "Editing video\nstill feels\nso rigid.",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 92,
+        "fontWeight": 800,
+        "color": "$ink",
+        "lineHeight": 1.0,
+        "letterSpacing": -1.5
+      },
+      "in": {
+        "type": "slideUp",
+        "duration": 0.7,
+        "distance": 70
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.35
+      }
+    },
+    {
+      "id": "s1-icon",
+      "name": "Film strip with lock",
+      "type": "svg",
+      "scene": "s1",
+      "track": 4,
+      "start": 0.9,
+      "duration": 3.1,
+      "frame": {
+        "x": 130,
+        "y": 520,
+        "w": 760,
+        "h": 380
+      },
+      "viewBox": "0 0 760 380",
+      "svg": "<rect x=\"10\" y=\"60\" width=\"600\" height=\"260\" rx=\"18\" style=\"fill:$panel\"/><rect x=\"34\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"34\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"92\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"92\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"150\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"150\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"208\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"208\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"266\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"266\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"324\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"324\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"382\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"382\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"440\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"440\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"498\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"498\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"556\" y=\"76\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"556\" y=\"282\" width=\"30\" height=\"22\" rx=\"5\" style=\"fill:$bg\"/><rect x=\"40\" y=\"118\" width=\"170\" height=\"144\" rx=\"10\" style=\"fill:$soft;opacity:.35\"/><rect x=\"225\" y=\"118\" width=\"170\" height=\"144\" rx=\"10\" style=\"fill:$soft;opacity:.55\"/><rect x=\"410\" y=\"118\" width=\"170\" height=\"144\" rx=\"10\" style=\"fill:$soft;opacity:.75\"/><path d=\"M600 160 v-46 a60 60 0 0 1 120 0 v46\" style=\"fill:none;stroke:$accent;stroke-width:22;stroke-linecap:round\"/><rect x=\"570\" y=\"160\" width=\"180\" height=\"150\" rx=\"22\" style=\"fill:$accent\"/><circle cx=\"660\" cy=\"220\" r=\"18\" style=\"fill:$bg\"/><rect x=\"652\" y=\"226\" width=\"16\" height=\"44\" rx=\"6\" style=\"fill:$bg\"/>",
+      "keys": {
+        "rotation": [
+          {
+            "t": 0,
+            "v": -2
+          },
+          {
+            "t": 3.1,
+            "v": 2,
+            "ease": "sine.inOut"
+          }
+        ]
+      },
+      "in": {
+        "type": "pop",
+        "duration": 0.6
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s2-kicker",
+      "name": "Chapter",
+      "type": "text",
+      "scene": "s2",
+      "track": 5,
+      "start": 0.1,
+      "duration": 4.0,
+      "frame": {
+        "x": 120,
+        "y": 92,
+        "w": 800,
+        "h": 48
+      },
+      "text": "Chapter 2: The idea",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 30,
+        "fontWeight": 600,
+        "color": "$accent"
+      },
+      "in": {
+        "type": "fade",
+        "duration": 0.5
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s2-title",
+      "name": "Title",
+      "type": "text",
+      "scene": "s2",
+      "track": 6,
+      "start": 0.3,
+      "duration": 4.0,
+      "frame": {
+        "x": 120,
+        "y": 150,
+        "w": 1100,
+        "h": 220
+      },
+      "text": "Every element is\nits own layer.",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 92,
+        "fontWeight": 800,
+        "color": "$ink",
+        "lineHeight": 1.0,
+        "letterSpacing": -1.5
+      },
+      "in": {
+        "type": "slideUp",
+        "duration": 0.7,
+        "distance": 70
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.35
+      }
+    },
+    {
+      "id": "s2-stack",
+      "name": "Layer stack",
+      "type": "svg",
+      "scene": "s2",
+      "track": 4,
+      "start": 0.6,
+      "duration": 3.7,
+      "frame": {
+        "x": 140,
+        "y": 430,
+        "w": 900,
+        "h": 560
+      },
+      "viewBox": "0 0 900 560",
+      "svg": "<polygon points=\"120,500 620,500 780,380 280,380\" style=\"fill:$panel\"/><text x=\"450\" y=\"454\" text-anchor=\"middle\" style=\"font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:38px;fill:$ink\">Background</text><polygon points=\"120,360 620,360 780,240 280,240\" style=\"fill:$soft\"/><text x=\"450\" y=\"314\" text-anchor=\"middle\" style=\"font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:38px;fill:$bg\">Graphic</text><polygon points=\"120,220 620,220 780,100 280,100\" style=\"fill:$accent\"/><text x=\"450\" y=\"174\" text-anchor=\"middle\" style=\"font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:38px;fill:$bg\">Text</text>",
+      "keys": {
+        "y": [
+          {
+            "t": 0,
+            "v": 430
+          },
+          {
+            "t": 3.7,
+            "v": 404,
+            "ease": "sine.inOut"
+          }
+        ]
+      },
+      "in": {
+        "type": "wipe",
+        "duration": 0.9,
+        "ease": "power2.inOut"
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s3-kicker",
+      "name": "Chapter",
+      "type": "text",
+      "scene": "s3",
+      "track": 5,
+      "start": 0.1,
+      "duration": 4.0,
+      "frame": {
+        "x": 120,
+        "y": 92,
+        "w": 800,
+        "h": 48
+      },
+      "text": "Chapter 3: Live editable",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 30,
+        "fontWeight": 600,
+        "color": "$accent"
+      },
+      "in": {
+        "type": "fade",
+        "duration": 0.5
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s3-title",
+      "name": "Title",
+      "type": "text",
+      "scene": "s3",
+      "track": 6,
+      "start": 0.3,
+      "duration": 4.0,
+      "frame": {
+        "x": 120,
+        "y": 150,
+        "w": 1100,
+        "h": 220
+      },
+      "text": "Swap the content.\nKeep the frame.",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 92,
+        "fontWeight": 800,
+        "color": "$ink",
+        "lineHeight": 1.0,
+        "letterSpacing": -1.5
+      },
+      "in": {
+        "type": "slideUp",
+        "duration": 0.7,
+        "distance": 70
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.35
+      }
+    },
+    {
+      "id": "s3-bild",
+      "name": "AI image",
+      "type": "image",
+      "track": 4,
+      "anchor": {
+        "word": "w22",
+        "offset": -0.3
+      },
+      "start": 0,
+      "duration": 2.8,
+      "frame": {
+        "x": 140,
+        "y": 430,
+        "w": 640,
+        "h": 430
+      },
+      "src": "assets/image.png",
+      "fit": "cover",
+      "radius": 28,
+      "source": {
+        "kind": "ai",
+        "prompt": "Mountain lake at sunrise, flat illustration",
+        "model": "any"
+      },
+      "in": {
+        "type": "pop",
+        "duration": 0.55
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "s3-tag",
+      "name": "Note",
+      "type": "text",
+      "scene": "s3",
+      "track": 5,
+      "start": 1.6,
+      "duration": 2.6,
+      "frame": {
+        "x": 840,
+        "y": 760,
+        "w": 560,
+        "h": 76
+      },
+      "text": "Same frame, new content",
+      "style": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontSize": 32,
+        "fontWeight": 700,
+        "color": "$bg",
+        "background": "$accent",
+        "padding": 14,
+        "radius": 16,
+        "align": "center",
+        "valign": "middle"
+      },
+      "in": {
+        "type": "slideLeft",
+        "duration": 0.5
+      },
+      "out": {
+        "type": "fade",
+        "duration": 0.3
+      }
+    },
+    {
+      "id": "cam",
+      "name": "Facecam",
+      "type": "video",
+      "track": 50,
+      "start": 0,
+      "duration": 13,
+      "src": "assets/facecam.mp4",
+      "fit": "cover",
+      "radius": 28,
+      "muted": true,
+      "source": {
+        "kind": "recording"
+      },
+      "frame": {
+        "x": 1037,
+        "y": 129,
+        "w": 806,
+        "h": 822
+      },
+      "keys": {
+        "x": [
+          {
+            "t": 0,
+            "v": 1037
+          },
+          {
+            "t": 4.0,
+            "v": 1037
+          },
+          {
+            "t": 4.7,
+            "v": 1493,
+            "ease": "power3.inOut"
+          }
+        ],
+        "y": [
+          {
+            "t": 0,
+            "v": 129
+          },
+          {
+            "t": 4.0,
+            "v": 129
+          },
+          {
+            "t": 4.7,
+            "v": 730,
+            "ease": "power3.inOut"
+          }
+        ],
+        "w": [
+          {
+            "t": 0,
+            "v": 806
+          },
+          {
+            "t": 4.0,
+            "v": 806
+          },
+          {
+            "t": 4.7,
+            "v": 384,
+            "ease": "power3.inOut"
+          }
+        ],
+        "h": [
+          {
+            "t": 0,
+            "v": 822
+          },
+          {
+            "t": 4.0,
+            "v": 822
+          },
+          {
+            "t": 4.7,
+            "v": 307,
+            "ease": "power3.inOut"
+          }
+        ]
+      },
+      "in": {
+        "type": "fade",
+        "duration": 0.6
+      }
+    },
+    {
+      "id": "cam-audio",
+      "name": "Facecam audio",
+      "type": "audio",
+      "track": 51,
+      "start": 0,
+      "duration": 13,
+      "src": "assets/facecam.mp4",
+      "volume": 1
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "type": "audio",
+      "track": 52,
+      "start": 0,
+      "duration": 13,
+      "src": "assets/music.mp3",
+      "volume": 0.35
+    }
+  ],
+  "transcript": {
+    "source": "assets/facecam.mp4",
+    "words": [
+      {
+        "id": "w01",
+        "text": "Editing",
+        "t0": 0.4,
+        "t1": 0.8
+      },
+      {
+        "id": "w02",
+        "text": "video",
+        "t0": 0.82,
+        "t1": 1.35
+      },
+      {
+        "id": "w03",
+        "text": "still",
+        "t0": 1.4,
+        "t1": 1.65
+      },
+      {
+        "id": "w04",
+        "text": "feels",
+        "t0": 1.66,
+        "t1": 1.85
+      },
+      {
+        "id": "w05",
+        "text": "so",
+        "t0": 1.86,
+        "t1": 2.05
+      },
+      {
+        "id": "w06",
+        "text": "very",
+        "t0": 2.1,
+        "t1": 2.5
+      },
+      {
+        "id": "w07",
+        "text": "rigid.",
+        "t0": 2.52,
+        "t1": 2.8
+      },
+      {
+        "id": "w08",
+        "text": "The",
+        "t0": 4.5,
+        "t1": 4.65
+      },
+      {
+        "id": "w09",
+        "text": "idea:",
+        "t0": 4.66,
+        "t1": 5.05
+      },
+      {
+        "id": "w10",
+        "text": "every",
+        "t0": 5.3,
+        "t1": 5.6
+      },
+      {
+        "id": "w11",
+        "text": "element",
+        "t0": 5.62,
+        "t1": 6.05
+      },
+      {
+        "id": "w12",
+        "text": "is",
+        "t0": 6.07,
+        "t1": 6.2
+      },
+      {
+        "id": "w13",
+        "text": "its",
+        "t0": 6.22,
+        "t1": 6.4
+      },
+      {
+        "id": "w14",
+        "text": "own",
+        "t0": 6.42,
+        "t1": 6.8
+      },
+      {
+        "id": "w15",
+        "text": "layer.",
+        "t0": 6.82,
+        "t1": 7.3
+      },
+      {
+        "id": "w16",
+        "text": "Then",
+        "t0": 8.9,
+        "t1": 9.05
+      },
+      {
+        "id": "w17",
+        "text": "you",
+        "t0": 9.06,
+        "t1": 9.3
+      },
+      {
+        "id": "w18",
+        "text": "simply",
+        "t0": 9.32,
+        "t1": 9.75
+      },
+      {
+        "id": "w19",
+        "text": "swap",
+        "t0": 9.76,
+        "t1": 9.9
+      },
+      {
+        "id": "w20",
+        "text": "out",
+        "t0": 9.92,
+        "t1": 10.25
+      },
+      {
+        "id": "w21",
+        "text": "the",
+        "t0": 10.27,
+        "t1": 10.4
+      },
+      {
+        "id": "w22",
+        "text": "image.",
+        "t0": 10.42,
+        "t1": 10.75
+      },
+      {
+        "id": "w23",
+        "text": "Done.",
+        "t0": 10.77,
+        "t1": 11.1
+      }
+    ]
+  }
+}

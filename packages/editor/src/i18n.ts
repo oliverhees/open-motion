@@ -1,0 +1,155 @@
+import { createContext, useContext } from "react";
+
+export type Lang = "de" | "en";
+
+const de = {
+  appLead: "Motion Graphics, bei denen jedes Element eine Ebene ist, die du live bearbeitest.",
+  newProject: "Neues Projekt", title: "Titel", titlePlaceholder: "Mein Erklärvideo", template: "Vorlage",
+  templateBlank: "Leer", templateExample: "Beispiel: Erklärvideo (Englisch)", create: "Projekt anlegen", creating: "Lege an…",
+  emptyTitle: "Leg dein erstes Projekt an", emptyBody: "Starte leer oder mit dem Erklärvideo-Beispiel inklusive Facecam.",
+  updated: "Geändert", loading: "Lädt…", notFound: "Projekt nicht gefunden.", projects: "Projekte",
+  saving: "Speichert…", saved: "Gespeichert", saveError: "Nicht gespeichert", export: "Exportieren",
+  play: "Abspielen", pause: "Pause", restart: "Zum Anfang", commentMode: "Kommentar-Modus", undo: "Rückgängig", redo: "Wiederholen",
+  sceneOf: "Szene {n} von {m}", noScenes: "Keine Szenen", name: "Name", length: "Länge", speed: "Tempo", wordsOnScreen: "Texte in dieser Szene",
+  layer: "Ebene", noSelection: "Nichts ausgewählt", noSelectionHint: "Klick auf ein Element in der Vorschau. Doppelklick auf Text zum Tippen.",
+  position: "Position", size: "Größe", rotation: "Drehung", opacity: "Deckkraft", timing: "Zeit", start: "Start", duration: "Dauer",
+  enter: "Einblenden", exit: "Ausblenden", none: "Keine", text: "Text", fontSize: "Schriftgröße", weight: "Gewicht", color: "Farbe",
+  align: "Ausrichtung", fill: "Füllung", source: "Quelle", fit: "Einpassen", swapTo: "Inhalt tauschen", swapHint: "Rahmen, Zeit und Keyframes bleiben.",
+  kind_text: "Text", kind_shape: "Form", kind_svg: "Grafik", kind_image: "Bild", kind_video: "Video", kind_audio: "Ton",
+  keyHere: "Keyframe hier setzen", keyStart: "Animieren: Keyframe setzen", animated: "animiert",
+  tabTweaks: "Tweaks", tabLayers: "Ebenen", tabStyle: "Stil", tabComments: "Kommentare",
+  palette: "Farbpalette", background: "Hintergrund", fonts: "Schriften", noFonts: "Systemschrift",
+  noComments: "Noch keine Kommentare. Schalte den Kommentar-Modus ein und klick auf ein Element.",
+  commentPlaceholder: "@KI mach daraus einen Eiskaffee mit Eiswürfeln", sendToAI: "An KI senden", cancel: "Abbrechen", save: "Speichern",
+  commentEmpty: "Schreib zuerst einen Kommentar.", statusOpen: "Offen", statusQueued: "Für KI vorgemerkt", statusDone: "Erledigt",
+  markDone: "Erledigt", reopen: "Wieder öffnen", remove: "Löschen", wholeFrame: "ganzes Bild",
+  exportTitle: "Exportieren", format: "Format", resolution: "Auflösung", frameRate: "Bildrate", quality: "Qualität",
+  high: "Hoch", medium: "Mittel", low: "Niedrig", sharpText: "Schärferer Text (doppelt so groß, langsamer)",
+  estimate: "Etwa {t} Renderzeit", estimateMeasured: "gemessen an deinen letzten Exporten", estimateGuess: "erste Schätzung, wird mit jedem Export genauer", server: "Server", planLine: "{cores} Kerne{c}, {mem} GB frei, Last {load} → {workers} Worker ({limit}){gpu}", planContainer: " (Container)", lim_cpu: "begrenzt durch CPU", lim_ram: "begrenzt durch RAM", lim_cap: "Obergrenze 16", lim_forced: "fest eingestellt", startExport: "Exportieren", queued: "In der Warteschlange…", rendering: "Rendert… {s} s",
+  done: "Fertig", download: "Herunterladen", failed: "Export fehlgeschlagen", close: "Schließen",
+  hide: "Ausblenden", show: "Einblenden", lock: "Sperren", unlock: "Entsperren", up: "Nach oben", down: "Nach unten",
+  svgCode: "SVG-Code", hintSelect: "Klicken = auswählen · Ziehen = verschieben · Ecken = Größe · Doppelklick auf Text = tippen",
+  hintComment: "Klick auf ein Element, um es zu kommentieren", needAsset: "Im Projekt gibt es noch keine Datei dieser Art.",
+  deleteLayer: "Ebene löschen", locked: "gesperrt",
+  tabMedia: "Medien", upload: "Hochladen", record: "Aufnehmen", dropHint: "Dateien hierher oder auf die Bühne ziehen",
+  uploading: "Lädt hoch… {p} %", converting: "Wird für sauberes Spulen umgewandelt…", files: "Dateien", noFiles: "Noch keine Dateien.",
+  addToStage: "Auf die Bühne", asFacecam: "Als Facecam", asAudio: "Als Tonspur",
+  recordTitle: "Facecam aufnehmen", camera: "Kamera", microphone: "Mikrofon", startRec: "Aufnahme starten", stopRec: "Stopp",
+  recAgain: "Neu aufnehmen", recSaved: "Aufnahme gespeichert", insertFacecam: "Als Facecam einfügen", layout: "Layout",
+  alsoTranscribe: "Danach transkribieren", camError: "Kein Zugriff auf Kamera oder Mikrofon: {e}",
+  layoutRight: "Groß rechts", layoutCorner: "Ecke", layoutCircle: "Kreis", layoutSplit: "Split", layoutFull: "Vollbild",
+  layoutHint: "Setzt einen Keyframe am Abspielkopf", facecamLayout: "Facecam-Layout",
+  transcript: "Transkript", transcribe: "Transkribieren", provider: "Anbieter", language: "Sprache", recording: "Aufnahme",
+  transcribing: "Transkribiert… {s} s", noTranscript: "Noch kein Transkript. Wähle eine Aufnahme und klick auf Transkribieren.",
+  anchorMode: "Klick auf ein Wort hängt die ausgewählte Ebene daran", anchorPick: "Ebene auswählen, dann Wort klicken",
+  anchor: "Anker", offset: "Versatz", removeAnchor: "Anker lösen", wordEdit: "Wort korrigieren",
+  settings: "Einstellungen", apiKeys: "API-Keys", keySet: "gesetzt {h}", keyMissing: "nicht gesetzt", keyPlaceholder: "Key einfügen",
+  keyNote: "Keys bleiben auf dem Server. Der Browser sieht nur, ob einer gesetzt ist.", defaultProvider: "Standard-Anbieter",
+  localMissing: "Lokales Whisper ist nicht installiert (pip install faster-whisper).", needKey: "Für {p} fehlt der API-Key (Einstellungen).",
+  p_local: "Lokal (faster-whisper)", p_openai: "OpenAI", p_elevenlabs: "ElevenLabs Scribe", p_groq: "Groq", p_deepgram: "Deepgram",
+  aiOpen: "KI-Chat", aiTitle: "KI", aiPlaceholder: "Beschreib dein Video oder was sich ändern soll …", send: "Senden",
+  aiThinking: "Denkt nach … {s} s", aiFromTranscript: "Grafiken aus Transkript", aiComments: "Kommentare abarbeiten ({n})",
+  aiChanges: "{n} Änderungen", aiImages: "{n} Bilder", aiChange1: "1 Änderung", aiImage1: "1 Bild", diagTitle: "Verbindungen testen", diagRun: "Jetzt testen", diagRunning: "Teste … {s} s", diagImages: "Auch ein echtes Testbild erzeugen (kostet wenige Cent)", diagAgent: "Auch einen KI-Probelauf machen (kostet wenige Cent)", diagCopy: "Bericht kopieren", diagCopied: "Kopiert. Der Bericht enthält keine Keys.", diagSaveFirst: "Erst speichern, dann testen.",
+  login: "Anmelden", password: "Passwort", loginWrong: "Das Passwort stimmt nicht.", logout: "Abmelden",
+  tokensTitle: "Zugänge für KIs (API-Tokens)", tokensNote: "Für MCP-Connector, Hermes, Skripte. Das Token wird nur einmal angezeigt.",
+  tokenName: "Name, z. B. Claude oder Hermes", tokenCreate: "Token erstellen", tokenShownOnce: "Jetzt kopieren, es wird nicht noch einmal angezeigt:",
+  tokenRevoke: "Widerrufen", tokenLastUsed: "zuletzt benutzt", tokenNever: "noch nie benutzt", tokenUse: "Verwendung: Header Authorization: Bearer <Token>",
+  workerOffline: "Der Render-Worker ist gerade nicht erreichbar. Der Export wartet in der Warteschlange und startet automatisch, sobald er läuft.", aiUndo: "Rückgängig", aiUndone: "rückgängig gemacht",
+  aiUndoConfirm: "Seitdem gab es weitere Änderungen. Trotzdem auf den Stand vor dieser KI-Antwort zurück?",
+  aiEmpty: "Sag mir, was du brauchst. Zum Beispiel: „Mach eine 20-Sekunden-Animation für mein Café Ember Roast, 4 Szenen, warm und ruhig.“",
+  aiModel: "KI-Modell", imageModel: "Bildmodell", aiImage: "KI-Bild", aiImagePrompt: "Beschreib das Bild …", aiGenerate: "Generieren",
+  aiGenerating: "Generiert … {s} s", reply: "KI", p_anthropic: "Anthropic (Claude)", p_kie: "Kie.ai", p_gemini: "Google Gemini", p_openrouter: "OpenRouter",
+  model: "Modell", deleteKey: "Key löschen",
+  modeAnchor: "Anker", modeCut: "Schnitt", cutSelected: "Ausschneiden", removed: "−{s} s geschnitten",
+  cutHint: "Wort anklicken, mit Shift erweitern, Entf schneidet. Durchgestrichenes Wort anklicken = zurückholen.",
+  hideCut: "Gelöschte ausblenden", suggestions: "Vorschläge", sugFiller: "Füllwort", sugPause: "Pause",
+  applyOne: "Schneiden", applyAll: "Alle anwenden ({n})", noSuggestions: "Keine Füllwörter oder langen Pausen gefunden.",
+  resetCuts: "Alle Schnitte zurücksetzen", fillerNote: "Manche Dienste schreiben Füllwörter nicht mit. Pausen werden trotzdem gefunden.",
+};
+
+const en: typeof de = {
+  appLead: "Motion graphics where every element is a layer you edit live.",
+  newProject: "New project", title: "Title", titlePlaceholder: "My explainer", template: "Template",
+  templateBlank: "Blank", templateExample: "Example: explainer", create: "Create project", creating: "Creating…",
+  emptyTitle: "Create your first project", emptyBody: "Start blank or with the explainer example, facecam included.",
+  updated: "Updated", loading: "Loading…", notFound: "Project not found.", projects: "Projects",
+  saving: "Saving…", saved: "Saved", saveError: "Not saved", export: "Export",
+  play: "Play", pause: "Pause", restart: "Back to start", commentMode: "Comment mode", undo: "Undo", redo: "Redo",
+  sceneOf: "Scene {n} of {m}", noScenes: "No scenes", name: "Name", length: "Length", speed: "Speed", wordsOnScreen: "Words in this scene",
+  layer: "Layer", noSelection: "Nothing selected", noSelectionHint: "Click an element in the preview. Double-click text to type.",
+  position: "Position", size: "Size", rotation: "Rotation", opacity: "Opacity", timing: "Timing", start: "Start", duration: "Duration",
+  enter: "Enter", exit: "Exit", none: "None", text: "Text", fontSize: "Font size", weight: "Weight", color: "Color",
+  align: "Align", fill: "Fill", source: "Source", fit: "Fit", swapTo: "Swap content", swapHint: "Frame, timing and keyframes stay.",
+  kind_text: "Text", kind_shape: "Shape", kind_svg: "Graphic", kind_image: "Image", kind_video: "Video", kind_audio: "Audio",
+  keyHere: "Set keyframe here", keyStart: "Animate: set keyframe", animated: "animated",
+  tabTweaks: "Tweaks", tabLayers: "Layers", tabStyle: "Style", tabComments: "Comments",
+  palette: "Palette", background: "Background", fonts: "Fonts", noFonts: "System font",
+  noComments: "No comments yet. Turn on comment mode and click an element.",
+  commentPlaceholder: "@AI make it an iced coffee with ice cubes", sendToAI: "Send to AI", cancel: "Cancel", save: "Save",
+  commentEmpty: "Write a comment first.", statusOpen: "Open", statusQueued: "Queued for AI", statusDone: "Done",
+  markDone: "Done", reopen: "Reopen", remove: "Delete", wholeFrame: "whole frame",
+  exportTitle: "Export", format: "Format", resolution: "Resolution", frameRate: "Frame rate", quality: "Quality",
+  high: "High", medium: "Medium", low: "Low", sharpText: "Sharper text (renders at 2×, slower)",
+  estimate: "About {t} to render", estimateMeasured: "based on your last exports", estimateGuess: "first guess, improves with every export", server: "Server", planLine: "{cores} cores{c}, {mem} GB free, load {load} → {workers} worker(s) ({limit}){gpu}", planContainer: " (container)", lim_cpu: "limited by CPU", lim_ram: "limited by RAM", lim_cap: "cap of 16", lim_forced: "set manually", planLine: "{cores} Kerne{c}, {mem} GB frei, Last {load} → {workers} Worker ({limit}){gpu}", planContainer: " (Container)", lim_cpu: "begrenzt durch CPU", lim_ram: "begrenzt durch RAM", lim_cap: "Obergrenze 16", lim_forced: "fest eingestellt", startExport: "Export", queued: "Waiting in queue…", rendering: "Rendering… {s} s",
+  done: "Done", download: "Download", failed: "Export failed", close: "Close",
+  hide: "Hide", show: "Show", lock: "Lock", unlock: "Unlock", up: "Move up", down: "Move down",
+  svgCode: "SVG code", hintSelect: "Click = select · Drag = move · Corners = resize · Double-click text = type",
+  hintComment: "Click an element to comment on it", needAsset: "This project has no file of that kind yet.",
+  deleteLayer: "Delete layer", locked: "locked",
+  tabMedia: "Media", upload: "Upload", record: "Record", dropHint: "Drop files here or onto the stage",
+  uploading: "Uploading… {p} %", converting: "Converting for smooth seeking…", files: "Files", noFiles: "No files yet.",
+  addToStage: "Add to stage", asFacecam: "As facecam", asAudio: "As audio track",
+  recordTitle: "Record facecam", camera: "Camera", microphone: "Microphone", startRec: "Start recording", stopRec: "Stop",
+  recAgain: "Record again", recSaved: "Recording saved", insertFacecam: "Insert as facecam", layout: "Layout",
+  alsoTranscribe: "Transcribe afterwards", camError: "No access to camera or microphone: {e}",
+  layoutRight: "Big right", layoutCorner: "Corner", layoutCircle: "Circle", layoutSplit: "Split", layoutFull: "Full",
+  layoutHint: "Sets a keyframe at the playhead", facecamLayout: "Facecam layout",
+  transcript: "Transcript", transcribe: "Transcribe", provider: "Provider", language: "Language", recording: "Recording",
+  transcribing: "Transcribing… {s} s", noTranscript: "No transcript yet. Pick a recording and click Transcribe.",
+  anchorMode: "Click a word to attach the selected layer to it", anchorPick: "Select a layer, then click a word",
+  anchor: "Anchor", offset: "Offset", removeAnchor: "Detach", wordEdit: "Fix word",
+  settings: "Settings", apiKeys: "API keys", keySet: "set {h}", keyMissing: "not set", keyPlaceholder: "Paste key",
+  keyNote: "Keys stay on the server. The browser only sees whether one is set.", defaultProvider: "Default provider",
+  localMissing: "Local Whisper is not installed (pip install faster-whisper).", needKey: "API key for {p} is missing (Settings).",
+  p_local: "Local (faster-whisper)", p_openai: "OpenAI", p_elevenlabs: "ElevenLabs Scribe", p_groq: "Groq", p_deepgram: "Deepgram",
+  aiOpen: "AI chat", aiTitle: "AI", aiPlaceholder: "Describe your video or what should change …", send: "Send",
+  aiThinking: "Thinking … {s} s", aiFromTranscript: "Graphics from transcript", aiComments: "Work through comments ({n})",
+  aiChanges: "{n} changes", aiImages: "{n} images", aiChange1: "1 change", aiImage1: "1 image", diagTitle: "Test connections", diagRun: "Test now", diagRunning: "Testing … {s} s", diagImages: "Also generate a real test image (costs a few cents)", diagAgent: "Also do an AI trial run (costs a few cents)", diagCopy: "Copy report", diagCopied: "Copied. The report contains no keys.", diagSaveFirst: "Save first, then test.",
+  login: "Sign in", password: "Password", loginWrong: "Wrong password.", logout: "Sign out",
+  tokensTitle: "Access for AIs (API tokens)", tokensNote: "For the MCP connector, Hermes, scripts. The token is shown only once.",
+  tokenName: "Name, e.g. Claude or Hermes", tokenCreate: "Create token", tokenShownOnce: "Copy it now, it will not be shown again:",
+  tokenRevoke: "Revoke", tokenLastUsed: "last used", tokenNever: "never used", tokenUse: "Use: header Authorization: Bearer <token>",
+  workerOffline: "The render worker is not reachable right now. The export waits in the queue and starts automatically once it runs.", aiUndo: "Undo", aiUndone: "undone",
+  aiUndoConfirm: "There were more changes since. Go back to the state before this AI answer anyway?",
+  aiEmpty: "Tell me what you need. For example: “Make a 20-second animation for my café Ember Roast, 4 scenes, warm and calm.”",
+  aiModel: "AI model", imageModel: "Image model", aiImage: "AI image", aiImagePrompt: "Describe the image …", aiGenerate: "Generate",
+  aiGenerating: "Generating … {s} s", reply: "AI", p_anthropic: "Anthropic (Claude)", p_kie: "Kie.ai", p_gemini: "Google Gemini", p_openrouter: "OpenRouter",
+  model: "Model", deleteKey: "Delete key",
+  modeAnchor: "Anchor", modeCut: "Cut", cutSelected: "Cut", removed: "−{s} s cut",
+  cutHint: "Click a word, shift-click to extend, Delete cuts. Click a struck word to restore it.",
+  hideCut: "Hide cut words", suggestions: "Suggestions", sugFiller: "Filler", sugPause: "Pause",
+  applyOne: "Cut", applyAll: "Apply all ({n})", noSuggestions: "No filler words or long pauses found.",
+  resetCuts: "Reset all cuts", fillerNote: "Some services drop filler words. Pauses are still found.",
+};
+
+export type Key = keyof typeof de;
+const dict: Record<Lang, typeof de> = { de, en };
+
+export const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: "de", setLang: () => {} });
+
+export function useT() {
+  const { lang } = useContext(LangContext);
+  return (key: Key, vars?: Record<string, string | number>) => {
+    let s: string = dict[lang][key] ?? key;
+    if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
+}
+
+export function initialLang(): Lang {
+  try {
+    const saved = localStorage.getItem("om-lang");
+    if (saved === "de" || saved === "en") return saved;
+  } catch { /* storage blocked */ }
+  return navigator.language?.startsWith("de") ? "de" : "en";
+}
