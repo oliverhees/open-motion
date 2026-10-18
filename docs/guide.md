@@ -86,7 +86,10 @@
 openmotion validate spec.json
 openmotion describe spec.json                 # compact map for AI models
 openmotion compile  spec.json -o build/
-openmotion render   spec.json -o video.mp4 [--height 720] [--fps 30] [--quality high|medium|low] [--format mp4|gif] [--sharp]
+openmotion render   spec.json -o video.mp4 [--height 720] [--fps 30] [--quality high|medium|low] [--format mp4|gif|webm|mov|lottie] [--sharp]
+openmotion render   spec.json -o overlay.webm --format webm          # transparent, full-canvas background shapes hidden
+openmotion render   spec.json -o overlay.mov --format mov --hide bg  # choose the hidden layers yourself (--keep-bg keeps all)
+openmotion render   spec.json -o anim.json --format lottie           # Lottie (beta), prints what was left out
 openmotion patch    spec.json ops.json
 ```
 

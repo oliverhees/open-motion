@@ -249,6 +249,9 @@ openmotion validate spec.json                 # prüfen, Fehler in Klartext
 openmotion describe spec.json                 # kompakte Übersicht für KI-Modelle
 openmotion compile  spec.json -o build/       # HyperFrames-Projekt erzeugen
 openmotion render   spec.json -o video.mp4    # rendern
+openmotion render   spec.json -o overlay.webm --format webm   # transparent (Hintergrund-Flächen ausgeblendet)
+openmotion render   spec.json -o overlay.mov --format mov     # ProRes 4444 mit Alpha
+openmotion render   spec.json -o anim.json --format lottie    # Lottie (Beta), nennt, was fehlt
 openmotion patch    spec.json ops.json        # Änderungen anwenden
 ```
 
