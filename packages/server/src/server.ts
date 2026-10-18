@@ -18,7 +18,7 @@ import { Auth, sessionCookie } from "./auth.ts";
 import { FileQueue, type QueueJob } from "./queue.ts";
 import { workerFile, type WorkerInfo } from "./worker.ts";
 import { detectHardware, estimate, readStats } from "@openmotion/render";
-import { applyPatch, type MotionSpec } from "@openmotion/core";
+import { applyPatch, FORMATS, getStyle, type Format, type MotionSpec } from "@openmotion/core";
 import { ensureFonts, missingFamilies } from "./fonts.ts";
 
 export interface ServerOptions {
@@ -156,8 +156,10 @@ export function createServer(opts: ServerOptions) {
         if (parts[1] === "projects" && parts.length === 2) {
           if (m === "GET") return json(res, 200, await store.list());
           if (m === "POST") {
-            const body = await readBody<{ title?: string; template?: string; lang?: string }>(req);
-            return json(res, 201, await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en"));
+            const body = await readBody<{ title?: string; template?: string; lang?: string; format?: string; style?: string }>(req);
+            const format = (FORMATS as readonly string[]).includes(body.format ?? "") ? (body.format as Format) : undefined;
+            const style = getStyle(body.style)?.id;
+            return json(res, 201, await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en", { format, style }));
           }
         }
         if (parts[1] === "projects" && parts[2]) {

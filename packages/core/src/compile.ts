@@ -222,7 +222,7 @@ html,body{margin:0;padding:0;background:#000}
 .om-text{display:flex;flex-direction:column;white-space:pre-wrap;overflow-wrap:break-word}
 .om-text>.om-t{display:block}
 .om-p{display:inline-block;white-space:pre}
-.om-m{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .04em .12em;margin:0 -.04em -.12em}
+.om-m{display:inline-block;overflow:hidden;vertical-align:top;padding:.18em .04em .12em;margin:-.18em -.04em -.12em}
 .om-hl{display:inline}
 .om-count{font-variant-numeric:tabular-nums}
 .om-cap{position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:0 .22em}

@@ -8,6 +8,7 @@ import type { Settings } from "../settings.ts";
 import { complete, extractJson, type Fetch, type Msg } from "./llm.ts";
 import type { AiProgress } from "./cli.ts";
 import { ensureFonts } from "../fonts.ts";
+import { systemPrompt } from "./guide.ts";
 import { aspectFor, generateImage } from "./images.ts";
 
 export type AgentKind = "chat" | "comment" | "transcript";
@@ -26,7 +27,21 @@ export interface AgentRequest {
 }
 
 /** missingFonts: families Google Fonts does not know; the text falls back to the system font. */
-export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number; missingFonts?: string[] }
+export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number; missingFonts?: string[]; ask?: AskQuestion[] }
+
+/** A question the AI asks back; the editor shows it as a form. */
+export interface AskQuestion { id: string; q: string; options: string[]; multi?: boolean; free?: boolean }
+
+function cleanAsk(v: unknown): AskQuestion[] | null {
+  if (!Array.isArray(v) || !v.length) return null;
+  const out = v.slice(0, 6).flatMap((x, i) => {
+    const o = x as Record<string, unknown>;
+    if (typeof o?.q !== "string" || !o.q.trim()) return [];
+    const options = Array.isArray(o.options) ? o.options.filter((s): s is string => typeof s === "string" && !!s.trim()).slice(0, 8).map((s) => s.slice(0, 160)) : [];
+    return [{ id: typeof o.id === "string" && o.id ? o.id.slice(0, 40) : `q${i + 1}`, q: o.q.slice(0, 300), options, multi: o.multi === true, free: o.free !== false }];
+  });
+  return out.length ? out : null;
+}
 
 const MAX_IMAGES = 4;
 
@@ -40,10 +55,14 @@ export async function runAgent(req: AgentRequest, ctx: { settings: Settings; pro
     progress(attempt === 1 ? { phase: "thinking" } : { phase: "retry", n: attempt });
     const text = process.env.OPENMOTION_FAKE_AI === "1" ? fakeAnswer(req) : await complete(ctx.settings, system, convo, f, 8000, progress);
     progress({ phase: "checking" });
-    let out: { message?: unknown; ops?: unknown };
+    let out: { message?: unknown; ops?: unknown; ask?: unknown };
     try {
       out = extractJson(text) as typeof out;
-      if (!Array.isArray(out.ops)) throw new Error('Feld "ops" fehlt oder ist kein Array.');
+      const ask = cleanAsk(out.ask);
+      if (ask && (!Array.isArray(out.ops) || out.ops.length === 0)) {
+        return { message: typeof out.message === "string" ? out.message : "", ops: [], changed: [], images: [], attempts: attempt, ask };
+      }
+      if (!Array.isArray(out.ops)) throw new Error('Field "ops" is missing or not an array.');
       const ops = out.ops as PatchOp[];
       const check = applyPatch(req.spec, ops);
       const images = await resolveImages(ops, req.spec, ctx, f, progress);
@@ -132,53 +151,7 @@ function task(req: AgentRequest): string {
   return `AUFGABE (Nachricht vom Nutzer): ${last}`;
 }
 
-export function systemPrompt(spec: MotionSpec, uiLang?: "de" | "en"): string {
-  const lang = (uiLang ?? (spec.meta.lang?.startsWith("en") ? "en" : "de")) === "en" ? "English" : "Deutsch";
-  const { width: W, height: H, fps } = spec.canvas;
-  const palette = Object.keys(spec.style?.palette ?? {}).map((k) => `$${k}`).join(", ") || "(keine, nutze Hex-Farben)";
-  return `Du bist der Motion-Designer von OpenMotion. Du änderst Videos AUSSCHLIESSLICH über Patch-Operationen auf eine Motion-Spec.
-
-ANTWORTFORMAT: nur dieses JSON, nichts davor oder danach:
-{"message": "Deine Antwort an den Nutzer auf ${lang}", "ops": [ … ]}
-
-DIE ANTWORT ("message")
-- Sprich den Nutzer direkt an, wie in einem Chat. Sprache: ${lang}.
-- Sag in 2–5 kurzen Sätzen, was jetzt im Video zu sehen ist: welche Szenen, welche Texte, welcher Look, mit Zeitangaben (z. B. „ab 0:05").
-- Erwähne keine internen Prüfungen, Fehler oder Korrekturen. Der Nutzer sieht nur das Ergebnis.
-- Ist die Bitte unklar oder fehlt dir etwas Wichtiges, stell eine kurze Rückfrage und gib "ops": [] zurück.
-- Inhalte (Texte im Video) in der Sprache, die der Nutzer verwendet, außer er wünscht etwas anderes.
-
-REGELN
-- Ändere nur, was verlangt ist. Bestehende Ebenen behalten ihre id.
-- Neue ids: Kleinbuchstaben, Ziffern, Bindestriche; beginnen mit einem Buchstaben; eindeutig.
-- Leinwand ${W}×${H} px, ${fps} fps. Zeiten in Sekunden. Abstand zum Rand mind. 80 px.
-- Farben aus der Palette (${palette}) als "$name". Schrift groß, Text kurz.
-- "track" = Stapelreihenfolge (höher = oben). Facecam liegt meist ganz oben, überdecke sie nicht.
-- Ebenen in einer Szene: "scene": "<id>" + "start" relativ zur Szene. Ebenen zum Gesagten: "anchor": {"word": "<wort-id>", "offset": -0.2}.
-- Gezeichnete Grafik = "svg"-Ebene: nur innerer SVG-Code ohne <svg>-Hülle, passendes "viewBox", Farben per style="fill:$accent". Keine Skripte, keine externen Bilder. Flache, klare Formen.
-- Foto/Illustration, die man nicht zeichnen kann: Bild-Ebene mit "src": "ai:<ausführlicher Bild-Prompt auf Englisch>". Höchstens ${MAX_IMAGES} pro Antwort.
-- Animation über "in"/"out" (fade, slideUp, slideDown, slideLeft, slideRight, pop, wipe, blur) und "keys".
-
-EBENEN (gemeinsam: id, name, type, track, start, duration, scene?, anchor?, frame{x,y,w,h,rotation?,scale?,opacity?}, keys?, in?, out?)
-- text: text, style{fontSize, fontWeight?, color?, align?("left"|"center"|"right"), valign?("top"|"middle"|"bottom"), lineHeight?, letterSpacing?, background?, padding?, radius?, uppercase?}
-- shape: shape("rect"|"ellipse"), fill?, stroke?, strokeWidth?, radius?
-- svg: svg, viewBox
-- image: src, fit?("cover"|"contain"), radius?
-- video: src, fit?, radius?, muted?, mediaStart?
-- audio (ohne frame): src, volume?
-keys: {"y":[{"t":0,"v":600},{"t":0.8,"v":520,"ease":"power3.out"}]}  t relativ zum Ebenen-Start; animierbar: x,y,w,h,rotation,scale,opacity.
-Eases: linear, power1–4.(in|out|inOut), sine.*, expo.*, circ.*, back.(in|out|inOut).
-
-OPERATIONEN
-{"op":"add","layer":{…}}
-{"op":"set","id":"…","path":"style.color","value":"$accent"}   (Punkt-Pfad, value null löscht)
-{"op":"replace","id":"…","layer":{… ohne id …}}                 (z. B. Grafik neu zeichnen)
-{"op":"swap","id":"…","content":{"type":"image","src":"ai:…"}}   (Inhalt tauschen, Rahmen und Zeit bleiben)
-{"op":"remove","id":"…"}
-{"op":"setAt","id":"…","prop":"x","t":3.2,"value":500,"key":true}  (ab Zeitpunkt animieren)
-{"op":"addScene","scene":{"id":"s4","name":"…","duration":4}}   {"op":"scene","id":"s1","set":{"duration":5}}
-{"op":"style","set":{"palette":{…}}}   {"op":"canvas","set":{"background":"$bg"}}`;
-}
+export { systemPrompt } from "./guide.ts";
 
 // ---------- Test mode (OPENMOTION_FAKE_AI=1): deterministic answers, no network ----------
 function fakeAnswer(req: AgentRequest): string {

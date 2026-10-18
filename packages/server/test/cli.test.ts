@@ -45,7 +45,7 @@ test("claude-code: agent runs through the CLI without any key, tools off, API ke
     assert.equal(log.args[0], "-p");
     assert.deepEqual(log.args.slice(log.args.indexOf("--tools"), log.args.indexOf("--tools") + 2), ["--tools", ""]);
     assert.ok(log.args.includes("--strict-mcp-config"));
-    assert.match(log.args[log.args.indexOf("--system-prompt") + 1], /Motion-Designer von OpenMotion/);
+    assert.match(log.args[log.args.indexOf("--system-prompt") + 1], /motion director of Open Motion/);
     assert.equal(log.args[log.args.indexOf("--model") + 1], "opus");
     assert.match(log.stdin, /AUSGEWÄHLTE EBENE[\s\S]*"id":"s1-icon"/);
     assert.equal(log.apiKey, null);

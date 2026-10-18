@@ -8,7 +8,7 @@ export function describe(spec: MotionSpec): string {
   const scenes = sceneTimings(spec);
   const lines: string[] = [];
   const c = spec.canvas;
-  lines.push(`Project "${spec.meta.title}" — canvas ${c.width}×${c.height}, ${c.fps} fps`);
+  lines.push(`Project "${spec.meta.title}" — canvas ${c.width}×${c.height}, ${c.fps} fps${spec.meta.style ? `, style ${spec.meta.style}` : ""}`);
   if (spec.style?.palette) lines.push(`Palette: ${Object.entries(spec.style.palette).map(([k, v]) => `$${k}=${v}`).join(", ")}`);
   if (spec.style?.fonts?.length) lines.push(`Fonts: ${[...new Set(spec.style.fonts.map((x) => x.family))].join(", ")}`);
   if (c.texture) lines.push(`Texture: ${Object.entries(c.texture).map(([k, v]) => `${k} ${v}`).join(", ")}`);
@@ -43,6 +43,7 @@ export function describe(spec: MotionSpec): string {
     if (l.type === "image" || l.type === "video" || l.type === "audio") line += ` src ${l.src}`;
     if (l.type === "image" && l.source?.prompt) line += ` prompt "${clip(l.source.prompt)}"`;
     if (l.hidden) line += " (hidden)";
+    if (l.meta?.placeholder) line += " (PLACEHOLDER: replace or remove when building)";
     lines.push(line);
   }
   if (spec.transcript?.words.length) {

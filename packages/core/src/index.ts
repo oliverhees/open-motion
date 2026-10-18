@@ -10,3 +10,4 @@ export { compile, sanitizeSvg, color, esc, type CompileOptions, type CompileResu
 export { describe } from "./describe.ts";
 export { facecamFrame, facecamLayers, type FacecamLayout } from "./presets.ts";
 export { normalizeCuts, removedBetween, isCutLayer, keptSegments, findSuggestions, wordRange, isWordCut, subtractCut, type Segment, type Suggestion } from "./cuts.ts";
+export { STYLES, FORMATS, FORMAT_SIZE, getStyle, styleBrief, type StyleDef, type Format } from "./styles.ts";

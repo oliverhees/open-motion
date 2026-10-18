@@ -185,7 +185,7 @@ export const layerSchema = z.discriminatedUnion("type", [
 export const specSchema = z
   .object({
     version: z.literal(1),
-    meta: z.object({ title: z.string(), lang: z.string().optional() }).strict(),
+    meta: z.object({ title: z.string(), lang: z.string().optional(), style: z.string().max(40).optional(), brief: z.string().max(6000).optional() }).strict(),
     canvas: z
       .object({
         width: z.number().int().min(16).max(7680), height: z.number().int().min(16).max(7680), fps: z.number().int().min(1).max(120), background: color.optional(),
