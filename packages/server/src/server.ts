@@ -18,7 +18,8 @@ import { Auth, sessionCookie } from "./auth.ts";
 import { FileQueue, type QueueJob } from "./queue.ts";
 import { workerFile, type WorkerInfo } from "./worker.ts";
 import { detectHardware, estimate, readStats } from "@openmotion/render";
-import type { MotionSpec } from "@openmotion/core";
+import { applyPatch, type MotionSpec } from "@openmotion/core";
+import { ensureFonts, missingFamilies } from "./fonts.ts";
 
 export interface ServerOptions {
   dataDir: string;
@@ -164,7 +165,19 @@ export function createServer(opts: ServerOptions) {
           const sub = parts[3];
           if (!sub && m === "GET") return json(res, 200, await store.read(id));
           if (sub === "rev" && m === "GET") return json(res, 200, { updatedAt: await store.rev(id) });
-          if (sub === "spec" && m === "PUT") return json(res, 200, await store.saveSpec(id, await readBody<MotionSpec>(req)));
+          if (sub === "spec" && m === "PUT") {
+            const body = await readBody<MotionSpec>(req);
+            const saved = await store.saveSpec(id, body);
+            // A font typed in the editor is fetched in the background; the editor picks the update up live.
+            if (process.env.OPENMOTION_NO_FONT_DOWNLOAD !== "1" && missingFamilies(body).length) {
+              void ensureFonts(body, store.dir(id)).then(async (r) => {
+                if (!r.op) return;
+                const { spec: now } = await store.read(id);
+                await store.saveSpec(id, applyPatch(now, [r.op]).spec);
+              }).catch(() => {});
+            }
+            return json(res, 200, saved);
+          }
           if (sub === "comments" && m === "PUT") {
             await store.saveComments(id, await readBody<Comment[]>(req));
             return json(res, 200, { ok: true });

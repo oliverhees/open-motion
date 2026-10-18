@@ -22,6 +22,8 @@ import { kindOf, probe, receiveUpload } from "./media.ts";
 import { sanitize, type ExportRequest } from "./jobs.ts";
 import { PROVIDERS, type Provider } from "./settings.ts";
 import { systemPrompt } from "./ai/agent.ts";
+import { renderFrames } from "./frames.ts";
+import { ensureFonts } from "./fonts.ts";
 
 const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const VERSION = "0.1.0";
@@ -35,6 +37,12 @@ Typical flow for an explainer from an existing facecam recording:
 → 5. get_transcript: cut filler words and pauses with apply_patch ({"op":"cuts"} or {"op":"cut"}), times are SOURCE times of the recording
 → 6. add titles/graphics with apply_patch, anchored to words ("anchor": {"word": "<id>", "offset": -0.2}) → 7. export_video, job_status.
 Read spec_reference once before writing patches. Every change shows up live in the editor (editor_url).`;
+
+/** A tool result that is not plain text (e.g. images). */
+class McpContent {
+  items: Record<string, unknown>[];
+  constructor(items: Record<string, unknown>[]) { this.items = items; }
+}
 
 interface Tool { name: string; description: string; inputSchema: Record<string, unknown>; run: (a: any, c: Ctx) => Promise<unknown> }
 interface Ctx extends ServerContext { baseUrl: string }
@@ -214,6 +222,19 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "look",
+    description: "SEE the video: renders still frames (half size) and returns them as images. Use it after building or changing something and judge it like a demanding motion designer: hierarchy, spacing, contrast, overlap, empty frames, text cut off, timing. Then fix with apply_patch and look again. Without times: 6 frames spread over the video.",
+    inputSchema: obj({ project, times: { type: "array", items: { type: "number" }, description: "Seconds to look at (max 12), e.g. the moment after each entrance" } }, ["project"]),
+    run: async (a, c) => {
+      const { spec } = await c.store.read(a.project);
+      const shots = await renderFrames(spec, c.store.dir(a.project), Array.isArray(a.times) ? a.times.map(Number).filter(Number.isFinite) : undefined);
+      return new McpContent(shots.flatMap((sh) => [
+        { type: "text", text: `t = ${sh.t.toFixed(2)} s` },
+        { type: "image", data: sh.png.toString("base64"), mimeType: "image/png" },
+      ]));
+    },
+  },
+  {
     name: "editor_url",
     description: "Link to open the project in the editor (shows changes live).",
     inputSchema: obj({ project }, ["project"]),
@@ -224,9 +245,15 @@ const TOOLS: Tool[] = [
 /** Applies ops to the saved spec and saves it. Throws with the exact patch error if anything is invalid. */
 async function save(c: Ctx, id: string, ops: PatchOp[]) {
   const { spec } = await c.store.read(id);
-  const res = applyPatch(spec, ops);
+  let res = applyPatch(spec, ops);
+  const fonts = process.env.OPENMOTION_NO_FONT_DOWNLOAD === "1" ? null : await ensureFonts(res.spec, c.store.dir(id)).catch(() => null);
+  if (fonts?.op) res = { ...applyPatch(res.spec, [fonts.op]), changed: res.changed };
   const saved = await c.store.saveSpec(id, res.spec);
-  return { ok: true, changed: res.changed, warnings: saved.warnings, duration: r(compositionDuration(res.spec)) };
+  return {
+    ok: true, changed: res.changed, warnings: saved.warnings, duration: r(compositionDuration(res.spec)),
+    ...(fonts?.added.length ? { fonts_added: fonts.added } : {}),
+    ...(fonts?.missing.length ? { fonts_missing: fonts.missing, hint: "These fonts are not on Google Fonts; pick another family." } : {}),
+  };
 }
 
 /** Folders the import may read from: OPENMOTION_IMPORT_DIRS (":"-separated), else the home folder (not in Docker). */
@@ -280,6 +307,7 @@ export async function handleRpc(msg: Rpc, c: Ctx): Promise<object | null> {
       if (!tool) return fail(-32602, `Unknown tool "${msg.params?.name}". Available: ${TOOLS.map((t) => t.name).join(", ")}`);
       try {
         const out = await tool.run(msg.params?.arguments ?? {}, c);
+        if (out instanceof McpContent) return reply({ content: out.items });
         return reply({ content: [{ type: "text", text: typeof out === "string" ? out : JSON.stringify(out, null, 2) }] });
       } catch (e) {
         return reply({ content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true });

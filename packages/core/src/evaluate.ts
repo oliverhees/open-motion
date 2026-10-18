@@ -27,7 +27,7 @@ export interface LayerState {
   timing: LayerTiming;
 }
 
-const DEFAULTS: Record<AnimProp, number> = { x: 0, y: 0, w: 1, h: 1, rotation: 0, scale: 1, opacity: 1 };
+const DEFAULTS: Record<AnimProp, number> = { x: 0, y: 0, w: 1, h: 1, rotation: 0, scale: 1, opacity: 1, blur: 0, rotateX: 0, rotateY: 0 };
 
 export function baseValue(layer: VisualLayer, prop: AnimProp): number {
   const v = layer.frame[prop];

@@ -47,12 +47,30 @@ const FAMILIES: Record<string, { in: EaseFn; out: EaseFn; inOut: EaseFn }> = {
   },
 };
 
+/** Critically damped spring (no overshoot) and a soft spring with one small overshoot, both settled at p = 1. */
+const spring = (zeta: number, omega: number): EaseFn => {
+  const raw = (p: number) => {
+    if (zeta >= 1) return 1 - (1 + omega * p) * Math.exp(-omega * p);
+    const wd = omega * Math.sqrt(1 - zeta * zeta);
+    return 1 - Math.exp(-zeta * omega * p) * (Math.cos(wd * p) + ((zeta * omega) / wd) * Math.sin(wd * p));
+  };
+  const end = raw(1);
+  return (p) => (p >= 1 ? 1 : p <= 0 ? 0 : raw(p) / end);
+};
+
 export const DEFAULT_EASE: Ease = "power2.inOut";
 
 /** Parses names like "power2.inOut", "back.out(2)", "linear", "none". Unknown names throw. */
 export function getEase(name: Ease = DEFAULT_EASE): EaseFn {
   const n = name.trim();
   if (n === "linear" || n === "none") return (p) => p;
+  if (n === "spring") return spring(1, 9);
+  if (n === "spring.soft") return spring(0.7, 10); // peaks ~4.7 % over, settles by the end
+  const st = /^steps\((\d{1,3})\)$/.exec(n);
+  if (st) {
+    const k = Math.max(1, Number(st[1]));
+    return (p) => (p >= 1 ? 1 : Math.floor(p * k) / k);
+  }
   const back = /^back\.(in|out|inOut)(?:\(([\d.]+)\))?$/.exec(n);
   if (back) {
     const c = back[2] ? Number(back[2]) : 1.70158;
@@ -60,7 +78,7 @@ export function getEase(name: Ease = DEFAULT_EASE): EaseFn {
   }
   const m = /^(power[0-4]|sine|expo|circ)\.(in|out|inOut)$/.exec(n);
   if (m) return FAMILIES[m[1]][m[2] as "in" | "out" | "inOut"];
-  throw new Error(`Unknown ease "${name}". Try "power2.inOut", "sine.out", "back.out" or "linear".`);
+  throw new Error(`Unknown ease "${name}". Try "power3.out", "expo.out", "sine.inOut", "spring", "spring.soft", "steps(8)", "back.out" or "linear".`);
 }
 
 export function isValidEase(name: string): boolean {
@@ -77,6 +95,8 @@ export function cssEasing(name: Ease = DEFAULT_EASE, samples = 32): string {
   if (name === "linear" || name === "none" || name === "power0.in" || name === "power0.out" || name === "power0.inOut") {
     return "linear";
   }
+  const st = /^steps\((\d{1,3})\)$/.exec(name.trim());
+  if (st) return `steps(${Math.max(1, Number(st[1]))}, end)`;
   const fn = getEase(name);
   const pts: string[] = [];
   for (let i = 0; i <= samples; i++) pts.push(String(Math.round(fn(i / samples) * 10000) / 10000));

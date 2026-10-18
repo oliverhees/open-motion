@@ -7,6 +7,7 @@ import { applyPatch, describe, isWordCut, sceneTimings, sourceToComp, type Layer
 import type { Settings } from "../settings.ts";
 import { complete, extractJson, type Fetch, type Msg } from "./llm.ts";
 import type { AiProgress } from "./cli.ts";
+import { ensureFonts } from "../fonts.ts";
 import { aspectFor, generateImage } from "./images.ts";
 
 export type AgentKind = "chat" | "comment" | "transcript";
@@ -24,7 +25,8 @@ export interface AgentRequest {
   lang?: "de" | "en";
 }
 
-export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number }
+/** missingFonts: families Google Fonts does not know; the text falls back to the system font. */
+export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number; missingFonts?: string[] }
 
 const MAX_IMAGES = 4;
 
@@ -45,7 +47,14 @@ export async function runAgent(req: AgentRequest, ctx: { settings: Settings; pro
       const ops = out.ops as PatchOp[];
       const check = applyPatch(req.spec, ops);
       const images = await resolveImages(ops, req.spec, ctx, f, progress);
-      return { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt };
+      // Fonts the AI picked are downloaded now and registered with one more op.
+      let missingFonts: string[] = [];
+      if (process.env.OPENMOTION_FAKE_AI !== "1" && process.env.OPENMOTION_NO_FONT_DOWNLOAD !== "1") {
+        const fonts = await ensureFonts(check.spec, ctx.projectDir, f).catch(() => null);
+        if (fonts?.op) ops.push(fonts.op);
+        missingFonts = fonts?.missing ?? [];
+      }
+      return { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt, missingFonts };
     } catch (e) {
       lastError = (e as Error).message;
       if (/API-Key|antwortet mit|Kie\.ai|Gemini|OpenRouter: |Bild/.test(lastError) && !/Patch op|Invalid Motion-Spec|JSON/.test(lastError)) throw e;
