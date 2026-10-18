@@ -15,3 +15,4 @@ export { Auth, type TokenInfo } from "./auth.ts";
 export { FileQueue, type QueueJob } from "./queue.ts";
 export { runWorker, workerFile } from "./worker.ts";
 export { completeCli, cliVersion, CLI_PROVIDERS, type CliProvider } from "./ai/cli.ts";
+export { mcpRoute, handleRpc, importRoots } from "./mcp.ts";

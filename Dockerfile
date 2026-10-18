@@ -51,6 +51,7 @@ COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node packages ./packages
 COPY --chown=node:node examples ./examples
 COPY --chown=node:node scripts ./scripts
+COPY --chown=node:node docs/motion-spec.md ./docs/motion-spec.md
 COPY --from=build --chown=node:node /app/packages/editor/dist ./packages/editor/dist
 RUN mkdir -p /data && chown node:node /data
 USER node

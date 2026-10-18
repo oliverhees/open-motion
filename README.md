@@ -8,7 +8,7 @@
 
 **The open-source, self-hosted motion graphics studio where every element is a live-editable layer.**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-47%20passing-brightgreen.svg)](#-status)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20passing-brightgreen.svg)](#-status)
 
 *Describe your video, talk into your facecam or drop in files. The AI builds layers, you fine-tune them live, and out comes an MP4.*
 
@@ -120,7 +120,7 @@ packages/
   editor/   React UI
 ```
 
-More: [Guide](docs/guide.md) · [Motion-Spec reference](docs/motion-spec.md)
+More: [Guide](docs/guide.md) · [Motion-Spec reference](docs/motion-spec.md) · [Claude Code, Codex, Hermes (MCP)](docs/mcp.md)
 
 ## 🛡️ Security
 
@@ -137,7 +137,7 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, backed by 47 automated tests and end-to-end runs in headless Chrome:**
+**Beta 0.1, backed by 55 automated tests and end-to-end runs in headless Chrome:**
 
 - [x] Layer core: spec, patches, compiler, render to MP4/GIF (checked frame by frame)
 - [x] Live editor: drag, resize, type, auto-keyframes, scenes, comments
@@ -148,9 +148,10 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 - [x] Login, API tokens, CSRF header, brute-force lock
 - [x] Editor and render worker as separate processes with a shared queue
 - [x] Self-tuning rendering with learning time estimates
+- [x] AI without API key: Claude Code and Codex with your subscription (Claude Code tested live, Codex simulated)
+- [x] MCP server for Claude Code, Codex, Hermes, with live update in the editor (tested live with Claude Code)
 - [ ] Live test of all AI, image and transcription APIs with real keys
 - [ ] Docker build confirmed on Coolify
-- [ ] MCP connector for Claude, Hermes and other agents
 - [ ] Skill for claude.ai, Claude Code, Cowork and Hermes
 
 **Known limitations:** AI, image and transcription APIs are built against the providers' docs and response formats; the live test with real keys is in progress. The Docker image follows proven patterns but still has to prove itself in your environment. Whole scenes do not follow text-based cuts yet. There is one password for everyone (no user accounts yet). Some server-side messages are still German. Videos from YouTube & co. cannot be embedded frame-accurately; import them as files.
@@ -159,7 +160,7 @@ Details: [STATUS.md](STATUS.md)
 
 ## 🗺️ Roadmap
 
-1. **MCP connector:** Claude (web, Code, Cowork), Hermes and other agents build videos directly on your server and send you the editor link.
+1. **MCP on claude.ai:** connect the MCP server as a connector in Claude on the web and in Cowork (needs OAuth).
 2. **Skill:** design rules, a spec cheat sheet and examples, so any AI builds good motion graphics.
 3. **Scenes anchored to words:** whole scenes follow text-based cuts.
 4. **Pro timeline:** tracks, keyframe curves, audio tracks.

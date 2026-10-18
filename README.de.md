@@ -8,7 +8,7 @@
 
 **Das offene, selbst-hostbare Motion-Graphics-Studio, in dem jedes Element eine live editierbare Ebene ist.**
 
-[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-47%20gr%C3%BCn-brightgreen.svg)](#-status)
+[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20gr%C3%BCn-brightgreen.svg)](#-status)
 
 *Beschreib dein Video, sprich in die Facecam oder zieh Dateien rein. Die KI baut Ebenen, du feilst live nach, und am Ende kommt eine MP4 raus.*
 
@@ -120,7 +120,7 @@ packages/
   editor/   React-Oberfläche
 ```
 
-Mehr: [Handbuch](docs/de/handbuch.md) · [Motion-Spec-Referenz](docs/de/motion-spec.md)
+Mehr: [Handbuch](docs/de/handbuch.md) · [Motion-Spec-Referenz](docs/de/motion-spec.md) · [Claude Code, Codex, Hermes (MCP)](docs/de/mcp.md)
 
 ## 🛡️ Sicherheit
 
@@ -137,7 +137,7 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, abgesichert durch 47 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
+**Beta 0.1, abgesichert durch 55 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
 
 - [x] Ebenen-Kern: Spec, Patches, Compiler, Render zu MP4/GIF (Bild für Bild geprüft)
 - [x] Live-Editor: ziehen, skalieren, tippen, Auto-Keyframes, Szenen, Kommentare
@@ -148,9 +148,10 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 - [x] Login, API-Tokens, CSRF-Header, Brute-Force-Bremse
 - [x] Editor und Render-Worker als getrennte Prozesse mit gemeinsamer Warteschlange
 - [x] Selbstanpassendes Rendering mit lernender Zeitschätzung
+- [x] KI ohne API-Key: Claude Code und Codex mit deinem Abo (Claude Code live getestet, Codex simuliert)
+- [x] MCP-Server für Claude Code, Codex, Hermes, mit Live-Abgleich im Editor (live mit Claude Code getestet)
 - [ ] Live-Test aller KI-, Bild- und Transkriptions-APIs mit echten Keys
 - [ ] Docker-Build in Coolify bestätigt
-- [ ] MCP-Connector für Claude, Hermes und andere Agenten
 - [ ] Skill für claude.ai, Claude Code, Cowork und Hermes
 
 **Bekannte Grenzen:** KI-, Bild- und Transkriptions-APIs sind nach den Dokus und Antwortformaten der Anbieter gebaut; der Live-Test mit echten Keys läuft. Das Docker-Image folgt bewährten Mustern, muss sich in deiner Umgebung aber noch beweisen. Ganze Szenen folgen dem Text-Schnitt noch nicht. Es gibt ein Passwort für alle (noch keine Benutzerkonten). Einige Server-Meldungen sind noch deutsch. Videos von YouTube & Co. lassen sich nicht bildgenau einbetten; importiere sie als Datei.
@@ -159,7 +160,7 @@ Details: [STATUS.md](STATUS.md)
 
 ## 🗺️ Roadmap
 
-1. **MCP-Connector:** Claude (Web, Code, Cowork), Hermes und andere Agenten bauen Videos direkt auf deinem Server und schicken dir den Editor-Link.
+1. **MCP auf claude.ai:** den MCP-Server als Connector in Claude im Web und in Cowork verbinden (braucht OAuth).
 2. **Skill:** Designregeln, Spec-Spickzettel und Beispiele, damit jede KI gute Motion Graphics baut.
 3. **Szenen an Wörtern verankern:** Ganze Szenen folgen dem Text-Schnitt.
 4. **Profi-Timeline:** Spuren, Keyframe-Kurven, Tonspuren.

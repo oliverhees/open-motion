@@ -5,6 +5,7 @@
 import path from "node:path";
 import { createServer } from "./server.ts";
 import { runWorker } from "./worker.ts";
+import { mcpRoute } from "./mcp.ts";
 
 const root = path.resolve(import.meta.dirname, "../../..");
 const port = Number(process.env.PORT ?? 4317);
@@ -18,10 +19,11 @@ if (role !== "worker" && process.env.OPENMOTION_REQUIRE_AUTH === "1" && !process
 }
 
 if (role !== "worker") {
-  const server = createServer({ dataDir, examplesDir: path.join(root, "examples/explainer"), editorDist: path.join(root, "packages/editor/dist") });
+  const server = createServer({ dataDir, examplesDir: path.join(root, "examples/explainer"), editorDist: path.join(root, "packages/editor/dist"), extra: mcpRoute() });
   server.listen(port, () => {
     console.log(`OpenMotion (${role}) läuft auf http://localhost:${port}`);
     console.log(`Daten: ${dataDir}`);
+    console.log(`MCP für Claude Code, Codex, Hermes: http://localhost:${port}/mcp`);
     if (!process.env.OPENMOTION_PASSWORD) console.log("⚠ Kein Passwort gesetzt (OPENMOTION_PASSWORD): nur lokal so betreiben.");
     if (process.env.OPENMOTION_DEBUG === "1") console.log(`Debug-Log: ${process.env.OPENMOTION_LOG_DIR}`);
     if (process.env.OPENMOTION_FAKE_AI === "1") console.log("⚠ Testmodus: KI-Antworten sind simuliert (OPENMOTION_FAKE_AI=1)");

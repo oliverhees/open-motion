@@ -102,6 +102,11 @@ export class Store {
     };
   }
 
+  /** Last change of the spec. The editor polls this to show changes from AIs (MCP) live. */
+  async rev(id: string): Promise<string> {
+    return (await readJson<ProjectInfo>(path.join(this.dir(id), "project.json"))).updatedAt;
+  }
+
   async saveSpec(id: string, spec: MotionSpec): Promise<{ warnings: string[]; updatedAt: string }> {
     const d = this.dir(id);
     const check = validateSpec(spec);

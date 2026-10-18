@@ -43,6 +43,8 @@
 
 **Test mode without keys:** `OPENMOTION_FAKE_AI=1 npm start`.
 
+**🔑 No API key, use your subscription:** **Claude Code** and **Codex** also work as AI providers. Open Motion then runs the logged-in CLI on your computer (without Docker only). And through the **MCP server** (`/mcp`) Claude Code, Codex and Hermes drive Open Motion directly. Guide: [Claude Code, Codex, Hermes](mcp.md).
+
 ## 📦 Export & rendering
 
 - MP4 or GIF, 720p/1080p, 15/30/60 fps, quality, optional sharper text (renders at 2×).

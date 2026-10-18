@@ -163,6 +163,7 @@ export function createServer(opts: ServerOptions) {
           const id = parts[2];
           const sub = parts[3];
           if (!sub && m === "GET") return json(res, 200, await store.read(id));
+          if (sub === "rev" && m === "GET") return json(res, 200, { updatedAt: await store.rev(id) });
           if (sub === "spec" && m === "PUT") return json(res, 200, await store.saveSpec(id, await readBody<MotionSpec>(req)));
           if (sub === "comments" && m === "PUT") {
             await store.saveComments(id, await readBody<Comment[]>(req));

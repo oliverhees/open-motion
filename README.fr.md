@@ -8,7 +8,7 @@
 
 **Le studio de motion design open source et auto-hébergé où chaque élément est un calque modifiable en direct.**
 
-[![Licence : AGPL v3](https://img.shields.io/badge/Licence-AGPL--3.0-blue.svg)](LICENSE) [![Statut](https://img.shields.io/badge/Statut-B%C3%AAta%200.1-orange.svg)](#-statut) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Auto-h%C3%A9berg%C3%A9](https://img.shields.io/badge/Auto--h%C3%A9berg%C3%A9-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-47%20r%C3%A9ussis-brightgreen.svg)](#-statut)
+[![Licence : AGPL v3](https://img.shields.io/badge/Licence-AGPL--3.0-blue.svg)](LICENSE) [![Statut](https://img.shields.io/badge/Statut-B%C3%AAta%200.1-orange.svg)](#-statut) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Auto-h%C3%A9berg%C3%A9](https://img.shields.io/badge/Auto--h%C3%A9berg%C3%A9-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20r%C3%A9ussis-brightgreen.svg)](#-statut)
 
 *Décrivez votre vidéo, parlez à votre facecam ou déposez des fichiers. L'IA construit les calques, vous les peaufinez en direct, et vous obtenez un MP4.*
 
@@ -108,7 +108,7 @@ Connexion par mot de passe avec cookie `HttpOnly`/`SameSite=Lax` (`Secure` derri
 
 ## 🔧 Statut
 
-**Bêta 0.1, couverte par 47 tests automatisés et des tests de bout en bout.** Prêt : cœur des calques, éditeur en direct, facecam, transcription locale, montage par texte, agent IA (mode test et fournisseurs simulés), connexion et jetons, éditeur et worker séparés, rendu auto-ajusté. À venir : test en direct de toutes les API avec de vraies clés, build Docker validé sur Coolify, connecteur MCP et Skill.
+**Bêta 0.1, couverte par 55 tests automatisés et des tests de bout en bout.** Prêt : cœur des calques, éditeur en direct, facecam, transcription locale, montage par texte, agent IA (mode test et fournisseurs simulés), connexion et jetons, éditeur et worker séparés, rendu auto-ajusté. À venir : test en direct de toutes les API avec de vraies clés, build Docker validé sur Coolify, connecteur MCP et Skill.
 
 **Limites connues :** les API IA, image et transcription suivent la documentation et les formats de réponse des fournisseurs ; le test réel avec de vraies clés est en cours. Les scènes entières ne suivent pas encore les coupes par texte. Un seul mot de passe pour tous. Certains messages serveur sont encore en allemand.
 
