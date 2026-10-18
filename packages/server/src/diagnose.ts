@@ -11,6 +11,7 @@ import { run } from "./media.ts";
 import { localAvailable } from "./transcribe.ts";
 import { DEFAULT_IMAGE_MODELS, DEFAULT_LLM_MODELS, type LlmProvider, type Settings } from "./settings.ts";
 import { complete, type Fetch } from "./ai/llm.ts";
+import { CLI_LABEL, CLI_PROVIDERS, cliVersion } from "./ai/cli.ts";
 import { generateImage } from "./ai/images.ts";
 import { detectHardware, planRender } from "@openmotion/render";
 import { runAgent } from "./ai/agent.ts";
@@ -59,6 +60,23 @@ export async function diagnose(settings: Settings, opts: DiagnoseOptions = {}): 
         }
         throw e;
       }
+    });
+  }
+
+  // Language models through a local CLI (subscription, no key). The test call only runs for the active one.
+  for (const p of CLI_PROVIDERS) {
+    const active = settings.ai.provider === p;
+    const name = `${CLI_LABEL[p]}${active ? " (aktiv)" : ""}`;
+    if (!active) {
+      const t0 = Date.now();
+      const v = await cliVersion(p).catch(() => null);
+      out.push({ area: "KI", name, ok: null, ms: Date.now() - t0, detail: v ? `installiert (${v}), nicht aktiv` : "nicht installiert (optional)" });
+      continue;
+    }
+    await add("KI", name, async () => {
+      const v = await cliVersion(p);
+      const txt = await complete(settings, 'Antworte nur mit {"ok":true}', [{ role: "user", content: "Test" }], f, 64);
+      return { detail: `${v}${settings.ai.model ? `, Modell ${settings.ai.model}` : ""}: Antwort erhalten (${txt.trim().slice(0, 40) || "leer"})` };
     });
   }
 
@@ -156,6 +174,8 @@ async function getJson(f: Fetch, url: string, headers: Record<string, string>): 
 }
 
 function hintFor(msg: string): string | undefined {
+  if (/nicht gefunden\. Installieren/.test(msg)) return "CLI installieren und einmal anmelden, dann Open Motion ohne Docker starten (npm start).";
+  if (/\(Abo\)/.test(msg)) return /→/.test(msg) ? undefined : "Im Terminal prüfen, ob die CLI angemeldet ist und eine Antwort gibt.";
   if (/ 401|unauthori|invalid.*key|authentication|permission/i.test(msg)) return "Key ungültig oder ohne Berechtigung. Neu erstellen und eintragen.";
   if (/ 402|credit|balance|quota|billing|insufficient/i.test(msg)) return "Kein Guthaben oder Limit erreicht. Konto beim Anbieter aufladen.";
   if (/ 429|rate/i.test(msg)) return "Zu viele Anfragen. Kurz warten und erneut testen.";
