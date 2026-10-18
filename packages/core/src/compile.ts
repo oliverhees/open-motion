@@ -12,10 +12,10 @@
 
 import { cssEasing, DEFAULT_EASE } from "./ease.ts";
 import { SpecError, validateSpec } from "./schema.ts";
-import { compositionDuration, layerTiming, sceneTimings, toAbs, type LayerTiming } from "./timing.ts";
+import { compositionDuration, layerTiming, sceneTimings, sourceToComp, toAbs, type LayerTiming } from "./timing.ts";
 import { NEUTRAL_FX, transitionWindows, type FxKey, type FxState } from "./transitions.ts";
-import { isCutLayer, keptSegments } from "./cuts.ts";
-import { isVisual, type AnimProp, type Keyframe, type Layer, type MotionSpec, type VisualLayer } from "./types.ts";
+import { isCutLayer, isWordCut, keptSegments } from "./cuts.ts";
+import { isVisual, type AnimProp, type Keyframe, type Layer, type MotionSpec, type TextStyle, type VisualLayer } from "./types.ts";
 import { interpolate } from "./evaluate.ts";
 
 export interface CompileOptions {
@@ -151,7 +151,7 @@ export function compile(spec: MotionSpec, options: CompileOptions = {}): Compile
     // Fx box: enter/exit transitions.
     anims.push(...fxAnimations(layer, timing, s));
 
-    const ctx: ContentCtx = { s, palette, assets, anims, timing, lang: spec.meta.lang ?? "de" };
+    const ctx: ContentCtx = { s, palette, assets, anims, timing, lang: spec.meta.lang ?? "de", spec };
     (spec.camera && layer.fixed ? fixedHtml : visualHtml).push(
       `<div id="om-${esc(layer.id)}" class="om-l" data-om-layer="${esc(layer.id)}" data-om-type="${layer.type}" style="${esc(frameStyle.join(";"))}">` +
         `<div id="om-fx-${esc(layer.id)}" class="om-fx">${
@@ -225,6 +225,7 @@ html,body{margin:0;padding:0;background:#000}
 .om-m{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .04em .12em;margin:0 -.04em -.12em}
 .om-hl{display:inline}
 .om-count{font-variant-numeric:tabular-nums}
+.om-cap{position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:0 .22em}
 #om-cam{position:absolute;left:0;top:0;width:100%;height:100%}
 .om-tex{position:absolute;inset:0;pointer-events:none;z-index:100000}
 </style>
@@ -373,6 +374,7 @@ interface ContentCtx {
   anims: AnimDef[];
   timing: LayerTiming;
   lang: string;
+  spec: MotionSpec;
 }
 
 /** Shadow, glow and glass for the content element. */
@@ -531,6 +533,91 @@ function textureHtml(spec: MotionSpec, width: number, height: number, duration: 
   return out.join("\n");
 }
 
+function textCss(st: TextStyle, ctx: ContentCtx, gradient: boolean, look: string[]): string[] {
+  const { s, palette } = ctx;
+  return [
+    `font-family:${st.fontFamily ? `${cssString(st.fontFamily)},system-ui,sans-serif` : "system-ui,sans-serif"}`,
+    `font-size:${px(st.fontSize * s)}`,
+    `font-weight:${st.fontWeight ?? 400}`,
+    st.italic ? "font-style:italic" : "",
+    `color:${color(st.color ?? "#ffffff", palette)}`,
+    `text-align:${st.align ?? "left"}`,
+    `justify-content:${{ top: "flex-start", middle: "center", bottom: "flex-end" }[st.valign ?? "top"]}`,
+    `line-height:${st.lineHeight ?? 1.15}`,
+    st.letterSpacing ? `letter-spacing:${px(st.letterSpacing * s)}` : "",
+    st.uppercase ? "text-transform:uppercase" : "",
+    st.background ? `background:${color(st.background, palette)}` : "",
+    st.padding ? `padding:${px(st.padding * s)}` : "",
+    st.radius ? `border-radius:${px(st.radius * s)}` : "",
+    gradient && st.gradient ? `background:${color(st.gradient, palette)};-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent` : "",
+    ...look,
+  ].filter(Boolean);
+}
+
+/**
+ * Captions: transcript words grouped into short phrases (max N words, break at punctuation and pauses).
+ * Each phrase shows while it is spoken; the current word lights up. Cut words are skipped and times
+ * come from the recording (sourceToComp), so captions follow every cut.
+ */
+function captionsBody(layer: Extract<VisualLayer, { type: "captions" }>, ctx: ContentCtx): string {
+  const spec = ctx.spec;
+  const tr = spec.transcript;
+  if (!tr?.words.length) return "";
+  const { timing } = ctx;
+  const maxN = layer.words ?? 3;
+  const words = tr.words
+    .filter((w) => !isWordCut(tr, w.id))
+    .map((w) => ({ w, t0: sourceToComp(spec, w.t0), t1: sourceToComp(spec, w.t1) }))
+    .filter((x) => x.t1 > timing.start && x.t0 < timing.end);
+  const groups: (typeof words)[] = [];
+  let cur: typeof words = [];
+  words.forEach((x, i) => {
+    cur.push(x);
+    const next = words[i + 1];
+    const brk = cur.length >= maxN || /[.,!?;:…]$/.test(x.w.text) || !next || next.t0 - x.t1 > 0.45;
+    if (brk) { groups.push(cur); cur = []; }
+  });
+  const life = Math.max(timing.end - timing.start, 1e-6);
+  const off = (t: number) => r4(Math.min(1, Math.max(0, (t - timing.start) / life)));
+  const act = layer.active ?? {};
+  const actColor = color(act.color ?? (ctx.palette.accent ? "$accent" : "#FFE600"), ctx.palette);
+  const baseColor = color(layer.style.color ?? "#ffffff", ctx.palette);
+  const actBg = act.background ? color(act.background, ctx.palette) : "";
+  const actScale = act.scale ?? 1.06;
+  const flex = { left: "flex-start", center: "center", right: "flex-end", top: "flex-start", middle: "center", bottom: "flex-end" } as const;
+  const place = `justify-content:${flex[layer.style.align ?? "center"]};align-content:${flex[layer.style.valign ?? "bottom"]};align-items:center`;
+  return groups.map((g, gi) => {
+    const gid = `om-cap-${layer.id}-${gi}`;
+    const show = g[0].t0;
+    const hide = Math.max(groups[gi + 1]?.[0].t0 ?? g[g.length - 1].t1 + 0.4, show + 0.05);
+    // Visible only while spoken (discrete), with a tiny lift on entry.
+    ctx.anims.push([gid, [
+      { offset: 0, opacity: 0, translate: "0 0.25em" },
+      { offset: off(show), opacity: 0, translate: "0 0.25em", easing: cssEasing("expo.out") },
+      { offset: off(Math.min(show + 0.18, hide)), opacity: 1, translate: "0 0" },
+      { offset: off(hide), opacity: 1, translate: "0 0" },
+      { offset: off(hide), opacity: 0, translate: "0 0" },
+      { offset: 1, opacity: 0, translate: "0 0" },
+    ], ms(timing.start), ms(life)]);
+    const spans = g.map((x, wi) => {
+      const wid = `${gid}-${wi}`;
+      const end = g[wi + 1]?.t0 ?? hide;
+      const frames: Record<string, string | number>[] = [
+        { offset: 0, color: baseColor, scale: 1 },
+        { offset: off(x.t0), color: baseColor, scale: 1 },
+        { offset: off(x.t0), color: actColor, scale: actScale },
+        { offset: off(end), color: actColor, scale: actScale },
+        { offset: off(end), color: baseColor, scale: 1 },
+        { offset: 1, color: baseColor, scale: 1 },
+      ];
+      if (actBg) frames.forEach((f, k) => { f.backgroundColor = k === 2 || k === 3 ? actBg : "transparent"; });
+      ctx.anims.push([wid, frames, ms(timing.start), ms(life)]);
+      return `<span id="${esc(wid)}" class="om-p" style="padding:0 .12em;border-radius:.18em">${esc(x.w.text)}</span>`;
+    }).join(" ");
+    return `<div id="${esc(gid)}" class="om-cap" style="${place}">${spans}</div>`;
+  }).join("");
+}
+
 function interpolateAbs(list: Keyframe[], t: number): number {
   return interpolate(list, { start: 0, end: Infinity, speed: 1 }, t);
 }
@@ -540,6 +627,10 @@ function content(layer: VisualLayer, clipAttrs: string, ctx: ContentCtx, idSuffi
   const cid = `om-c-${esc(layer.id)}${idSuffix}`;
   const look = lookCss(layer, ctx);
   switch (layer.type) {
+    case "captions": {
+      const css = textCss(layer.style, ctx, false, look);
+      return `<div id="${cid}" class="clip om-c om-text" ${clipAttrs} style="${esc(css.join(";"))}">${captionsBody(layer, ctx)}</div>`;
+    }
     case "text": {
       const st = layer.style;
       const css = [

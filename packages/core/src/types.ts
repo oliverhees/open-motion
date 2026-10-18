@@ -238,6 +238,21 @@ export interface VideoLayer extends LayerCommon {
   look?: Look;
 }
 
+/**
+ * Captions from the transcript: short phrases, the spoken word highlighted (creator style).
+ * Follows cuts automatically. Usually spans the whole video and is `fixed` (not moved by the camera).
+ */
+export interface CaptionsLayer extends LayerCommon {
+  type: "captions";
+  frame: Frame;
+  style: TextStyle;
+  /** Max words per phrase (default 3). Phrases also break at . , ! ? and pauses. */
+  words?: number;
+  /** The word being spoken right now. */
+  active?: { color?: string; background?: string; scale?: number };
+  look?: Look;
+}
+
 export interface AudioLayer extends LayerCommon {
   type: "audio";
   src: string;
@@ -245,7 +260,7 @@ export interface AudioLayer extends LayerCommon {
   volume?: number;
 }
 
-export type VisualLayer = TextLayer | ShapeLayer | SvgLayer | ImageLayer | VideoLayer;
+export type VisualLayer = TextLayer | ShapeLayer | SvgLayer | ImageLayer | VideoLayer | CaptionsLayer;
 export type Layer = VisualLayer | AudioLayer;
 export type LayerType = Layer["type"];
 

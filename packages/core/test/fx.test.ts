@@ -134,3 +134,24 @@ test("validation: CSS injection in looks is refused, unknown palette names insid
   const pal = validateSpec(base([text({ style: { fontSize: 40, gradient: "linear-gradient($nope, #fff)" } })]));
   assert.match(pal.errors.join("\n"), /color "\$nope" is not in style.palette/);
 });
+
+test("captions: phrases from the transcript (cut words skipped), active word lights up, follows cuts", () => {
+  const spec = base([
+    { id: "cam", type: "video", track: 1, start: 0, duration: 10, frame: { x: 0, y: 0, w: 1920, h: 1080 }, src: "assets/video/f.mp4" },
+    { id: "cap", type: "captions", track: 9, start: 0, duration: 10, frame: { x: 0, y: 800, w: 1920, h: 200 }, style: { fontSize: 60 }, words: 2, active: { color: "#ff0", background: "#000" } },
+  ], {
+    transcript: { source: "assets/video/f.mp4", words: [
+      { id: "w1", text: "Hallo", t0: 0.0, t1: 0.4 }, { id: "w2", text: "äh", t0: 0.5, t1: 0.8 }, { id: "w3", text: "liebe", t0: 1.0, t1: 1.3 },
+      { id: "w4", text: "Leute.", t0: 1.4, t1: 1.8 }, { id: "w5", text: "Los", t0: 3.0, t1: 3.3 },
+    ], cuts: [{ t0: 0.45, t1: 0.95 }] },
+  });
+  const c = compile(spec);
+  assert.doesNotMatch(c.html, />äh</, "cut word is not shown");
+  const groups = [...c.html.matchAll(/<div id="om-cap-cap-(\d+)" class="om-cap"[^>]*>(.*?)<\/div>/g)].map((m) => m[2].replace(/<[^>]+>/g, ""));
+  assert.deepEqual(groups, ["Hallo liebe", "Leute.", "Los"]);
+  const w = c.anims.find((a) => a[0] === "om-cap-cap-0-1")!;
+  // "liebe" starts at 1.0 s in the recording, 0.5 s were cut before it → 0.5 s in the video.
+  assert.equal(w[1][2].offset, 0.05);
+  assert.equal(w[1][2].color, "#ff0");
+  assert.equal(w[1][2].backgroundColor, "#000");
+});

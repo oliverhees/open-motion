@@ -89,6 +89,27 @@ const common = {
 
 const fit = z.enum(["cover", "contain", "fill"]).optional();
 
+const textStyle = z
+  .object({
+    fontFamily: z.string().max(120).refine((v) => !/[;{}<>]/.test(v), { message: "font family name only" }).optional(),
+    fontSize: pos,
+    fontWeight: z.number().int().min(100).max(1000).optional(),
+    italic: z.boolean().optional(),
+    color: color.optional(),
+    align: z.enum(["left", "center", "right"]).optional(),
+    valign: z.enum(["top", "middle", "bottom"]).optional(),
+    lineHeight: pos.optional(),
+    letterSpacing: num.optional(),
+    uppercase: z.boolean().optional(),
+    background: color.optional(),
+    padding: nonneg.optional(),
+    radius: nonneg.optional(),
+    gradient: cssText.optional(),
+    highlight: color.optional(),
+    marker: color.optional(),
+  })
+  .strict();
+
 export const layerSchema = z.discriminatedUnion("type", [
   z
     .object({
@@ -96,26 +117,7 @@ export const layerSchema = z.discriminatedUnion("type", [
       type: z.literal("text"),
       frame,
       text: z.string(),
-      style: z
-        .object({
-          fontFamily: z.string().optional(),
-          fontSize: pos,
-          fontWeight: z.number().int().min(100).max(1000).optional(),
-          italic: z.boolean().optional(),
-          color: color.optional(),
-          align: z.enum(["left", "center", "right"]).optional(),
-          valign: z.enum(["top", "middle", "bottom"]).optional(),
-          lineHeight: pos.optional(),
-          letterSpacing: num.optional(),
-          uppercase: z.boolean().optional(),
-          background: color.optional(),
-          padding: nonneg.optional(),
-          radius: nonneg.optional(),
-          gradient: cssText.optional(),
-          highlight: color.optional(),
-          marker: color.optional(),
-        })
-        .strict(),
+      style: textStyle,
       look: look.optional(),
       anim: textAnim.optional(),
       count: count.optional(),
@@ -161,6 +163,17 @@ export const layerSchema = z.discriminatedUnion("type", [
       muted: z.boolean().optional(),
       volume: num.min(0).max(4).optional(),
       source: source.optional(),
+      look: look.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...common,
+      type: z.literal("captions"),
+      frame,
+      style: textStyle,
+      words: z.number().int().min(1).max(12).optional(),
+      active: z.object({ color: color.optional(), background: color.optional(), scale: num.min(0.5).max(2).optional() }).strict().optional(),
       look: look.optional(),
     })
     .strict(),
@@ -259,6 +272,7 @@ export function validateSpec(input: unknown): ValidationResult {
     if (layer.type === "svg" && /<\s*script|on\w+\s*=|javascript:/i.test(layer.svg)) {
       warnings.push(`${where}: svg contains scripts or event handlers; they will be removed`);
     }
+    if (layer.type === "captions" && !spec.transcript?.words.length) warnings.push(`${where}: captions need a transcript; transcribe the recording first`);
     if (layer.type === "text" && layer.count && layer.anim) warnings.push(`${where}: "count" replaces the text, so "anim" is ignored`);
     if (layer.type === "text" && /\[\[[^\]]*$|^[^[]*\]\]/.test(layer.text)) warnings.push(`${where}: unbalanced [[ ]] highlight brackets in text`);
   }
@@ -289,7 +303,8 @@ export class SpecError extends Error {
 /** Every "$name" palette reference of a layer, also inside gradients and shadows. */
 function colorsOf(layer: MotionSpec["layers"][number]): string[] {
   const vals: (string | undefined)[] = [];
-  if (layer.type === "text") vals.push(layer.style.color, layer.style.background, layer.style.gradient, layer.style.highlight, layer.style.marker);
+  if (layer.type === "text" || layer.type === "captions") vals.push(layer.style.color, layer.style.background, layer.style.gradient, layer.style.highlight, layer.style.marker);
+  if (layer.type === "captions") vals.push(layer.active?.color, layer.active?.background);
   if (layer.type === "shape") vals.push(layer.fill, layer.stroke);
   if (layer.type !== "audio") vals.push(layer.look?.shadow, layer.look?.glow);
   return vals.flatMap((v) => (v ? v.match(/\$[a-z][a-z0-9-]*/g) ?? [] : []));

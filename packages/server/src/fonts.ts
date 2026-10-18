@@ -19,7 +19,7 @@ export function missingFamilies(spec: MotionSpec): string[] {
   const have = new Set((spec.style?.fonts ?? []).map((f) => f.family.toLowerCase()));
   const want = new Set<string>();
   for (const l of spec.layers) {
-    if (l.type !== "text" || !l.style.fontFamily) continue;
+    if ((l.type !== "text" && l.type !== "captions") || !l.style.fontFamily) continue;
     const fam = l.style.fontFamily.split(",")[0].trim().replace(/^["']|["']$/g, "");
     if (fam && !GENERIC.has(fam.toLowerCase()) && !have.has(fam.toLowerCase())) want.add(fam);
   }
