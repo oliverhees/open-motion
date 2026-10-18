@@ -22,6 +22,8 @@ const FASTER_WHISPER = "1.1.1";
 // faster-whisper 1.1.1 imports requests, newer huggingface_hub no longer brings it along.
 const REQUESTS = "2.34.2";
 const PORT = 4317;
+// Own config folders of Claude Code / Codex: the start icon does not load your shell profile, so keep them.
+const KEEP_ENV = ["CLAUDE_CONFIG_DIR", "CODEX_HOME"].filter((k) => process.env[k]);
 
 const win = process.platform === "win32";
 const mac = process.platform === "darwin";
@@ -172,6 +174,7 @@ function launcher(withWhisper: boolean): string {
       withWhisper ? `set "OPENMOTION_PYTHON=${VENV_PY}"` : "",
       "set OPENMOTION_OPEN_BROWSER=1",
       "set OPENMOTION_HOST=127.0.0.1",
+      ...KEEP_ENV.map((k) => `set "${k}=${process.env[k]}"`),
       `"${NODE}" "${main}"`,
       "if errorlevel 1 pause",
       "",
@@ -195,6 +198,7 @@ function launcher(withWhisper: boolean): string {
     withWhisper ? `export OPENMOTION_PYTHON="${VENV_PY}"` : "",
     "export OPENMOTION_OPEN_BROWSER=1",
     "export OPENMOTION_HOST=127.0.0.1",
+    ...KEEP_ENV.map((k) => `export ${k}="${process.env[k]}"`),
     `exec "${NODE}" "${main}" "$@"`,
     "",
   ].filter((l, i, a) => l !== "" || i === a.length - 1).join("\n"));

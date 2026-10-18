@@ -73,6 +73,26 @@ test("codex: prompt via stdin, read-only sandbox, answer from --output-last-mess
   }
 });
 
+test("claude-code: expired login shows only the readable message plus what to do", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "om-cli-test-"));
+  const bin = path.join(dir, "claude");
+  await writeFile(bin, `#!/usr/bin/env node
+require("node:fs").readFileSync(0);
+console.log(JSON.stringify({ type: "result", is_error: true, subagent_stats: { spawned: 0 }, result: "Failed to authenticate: OAuth session expired and could not be refreshed" }));
+process.exit(1);
+`);
+  await chmod(bin, 0o755);
+  process.env.OPENMOTION_CLAUDE_BIN = bin;
+  try {
+    await assert.rejects(completeCli("claude-code", undefined, "s", [{ role: "user", content: "x" }]), (e: Error) => {
+      assert.equal(e.message, "Claude Code (Abo) beendet mit Code 1: Failed to authenticate: OAuth session expired and could not be refreshed → Einmal `claude` im Terminal starten und mit /login anmelden.");
+      return true;
+    });
+  } finally {
+    delete process.env.OPENMOTION_CLAUDE_BIN;
+  }
+});
+
 test("CLI errors say what to do: missing program, not logged in", async () => {
   process.env.OPENMOTION_CLAUDE_BIN = path.join(os.tmpdir(), "does-not-exist-claude");
   try {

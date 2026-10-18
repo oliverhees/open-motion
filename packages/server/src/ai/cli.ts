@@ -94,7 +94,12 @@ function runCli(p: CliProvider, args: string[], stdin: string, cwd: string, env:
     child.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0) return resolve(out);
-      const msg = (err.trim() || out.trim()).slice(-600);
+      // Claude Code prints its error as JSON on stdout: show only the readable part.
+      let msg = (err.trim() || out.trim()).slice(-600);
+      try {
+        const j = JSON.parse(out.trim().split("\n").filter(Boolean).pop() ?? "") as { result?: unknown };
+        if (typeof j.result === "string" && j.result) msg = j.result.slice(0, 400);
+      } catch { /* not JSON */ }
       reject(new Error(`${CLI_LABEL[p]} beendet mit Code ${code}: ${msg}${loginHint(p, msg)}`));
     });
     child.stdin.on("error", () => {});
