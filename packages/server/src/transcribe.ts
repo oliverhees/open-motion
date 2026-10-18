@@ -59,11 +59,11 @@ export async function transcribe(file: string, settings: Settings, opts: Transcr
 async function local(file: string, model: string, language: string, modelsDir: string): Promise<{ words: RawWord[]; language?: string }> {
   let out: string;
   try {
-    out = await run("python3", [PY, file, model, language, modelsDir], { HF_HUB_DISABLE_TELEMETRY: "1" });
+    out = await run(python(), [PY, file, model, language, modelsDir], { HF_HUB_DISABLE_TELEMETRY: "1" });
   } catch (e) {
     const msg = (e as Error).message;
     if (msg.includes("nicht installiert") || msg.includes("exited with 3")) {
-      throw new Error("Lokales Whisper fehlt: pip install faster-whisper. Oder wähle unter Einstellungen einen API-Anbieter.");
+      throw new Error("Lokales Whisper fehlt: pip install faster-whisper (oder den Installer erneut starten und Whisper wählen). Oder wähle unter Einstellungen einen API-Anbieter.");
     }
     if (msg.includes("ENOENT")) throw new Error("Python 3 wurde nicht gefunden. Installiere Python 3 oder wähle einen API-Anbieter.");
     throw e;
@@ -111,9 +111,12 @@ export function withIds(words: RawWord[]): { id: string; text: string; t0: numbe
   return words.map((w, i) => ({ id: `w${run}-${i + 1}`, ...w }));
 }
 
+/** Python with faster-whisper. The installer sets OPENMOTION_PYTHON to its own environment. */
+const python = () => process.env.OPENMOTION_PYTHON || "python3";
+
 export async function localAvailable(): Promise<boolean> {
   try {
-    await run("python3", ["-c", "import faster_whisper"]);
+    await run(python(), ["-c", "import faster_whisper"]);
     return true;
   } catch {
     return false;
