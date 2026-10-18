@@ -8,7 +8,7 @@
 
 **The open-source, self-hosted motion graphics studio where every element is a live-editable layer.**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-90%20passing-brightgreen.svg)](#-status)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-91%20passing-brightgreen.svg)](#-status)
 
 *Describe your video, talk into your facecam or drop in files. The AI builds layers, you fine-tune them live, and out comes an MP4.*
 
@@ -200,7 +200,7 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, backed by 90 automated tests and end-to-end runs in headless Chrome:**
+**Beta 0.1, backed by 91 automated tests and end-to-end runs in headless Chrome:**
 
 - [x] Layer core: spec, patches, compiler, render to MP4/GIF (checked frame by frame)
 - [x] Live editor: drag, resize, type, auto-keyframes, scenes, comments

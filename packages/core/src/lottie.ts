@@ -354,6 +354,12 @@ function paint(value: string | undefined, palette: Record<string, string>, W: nu
   }).filter((x) => x.c) as { c: number[]; pos?: number }[];
   if (!stops.length) return null;
   stops.forEach((s, i) => { if (s.pos === undefined) s.pos = stops.length === 1 ? 0 : i / (stops.length - 1); });
+  // "transparent" fades in CSS without darkening (premultiplied): give fully transparent stops the color of their neighbour.
+  stops.forEach((s, i) => {
+    if (s.c[3] > 0) return;
+    const near = stops.slice(i + 1).find((x) => x.c[3] > 0) ?? [...stops.slice(0, i)].reverse().find((x) => x.c[3] > 0);
+    if (near) s.c = [near.c[0], near.c[1], near.c[2], 0];
+  });
   const colors = stops.flatMap((s) => [r4(s.pos!), r4(s.c[0]), r4(s.c[1]), r4(s.c[2])]);
   const alphas = stops.flatMap((s) => [r4(s.pos!), r4(s.c[3])]);
   let sPt: number[], ePt: number[];

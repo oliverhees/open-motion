@@ -177,3 +177,10 @@ test("scene op: a shorter scene trims its layers and their late keyframes, ancho
   assert.deepEqual(a.type === "shape" && a.keys?.scale?.map((k) => k.t), [0]);
   assert.equal(out.layers.find((l) => l.id === "b")!.duration, 0.5, "layers that fit stay");
 });
+
+test("lottie: a glow fading to transparent keeps its color (no dark ring)", () => {
+  const spec = base([{ id: "g", type: "shape", shape: "ellipse", track: 1, start: 0, duration: 2, frame: { x: 0, y: 0, w: 400, h: 400 }, fill: "radial-gradient(circle, $accent 0%, transparent 65%)" }]);
+  const layer = (toLottie(spec).json.layers as Record<string, any>[]).find((l) => l.nm === "g")!;
+  const gf = layer.shapes[0].it.find((i: any) => i.ty === "gf");
+  assert.deepEqual(gf.g.k.k, [0, 1, 0.2, 0, 0.65, 1, 0.2, 0, 0, 1, 0.65, 0]);
+});
