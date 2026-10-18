@@ -8,12 +8,12 @@
 // Rule 1 holds here too: the spec only changes through applyPatch.
 
 import type http from "node:http";
-import { createReadStream, existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
   applyPatch, compositionDuration, describe, facecamLayers, findSuggestions, isWordCut, sceneTimings, sourceToComp,
-  type FacecamLayout, type MotionSpec, type PatchOp,
+  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp,
 } from "@openmotion/core";
 import { estimate } from "@openmotion/render";
 import type { ServerContext } from "./server.ts";
@@ -21,20 +21,31 @@ import { HttpError } from "./store.ts";
 import { kindOf, probe, receiveUpload } from "./media.ts";
 import { sanitize, type ExportRequest } from "./jobs.ts";
 import { PROVIDERS, type Provider } from "./settings.ts";
-import { systemPrompt } from "./ai/agent.ts";
+import { motionGuide } from "./ai/guide.ts";
+import { renderFrames } from "./frames.ts";
+import { ensureFonts } from "./fonts.ts";
+import { imagesAvailable } from "./integrations.ts";
 
 const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const VERSION = "0.1.0";
 const LAYOUTS: FacecamLayout[] = ["right", "corner", "circle", "split", "full"];
-const SPEC_DOC = path.resolve(import.meta.dirname, "../../../docs/motion-spec.md");
 
-const INSTRUCTIONS = `Open Motion: motion graphics as code. A video is a Motion-Spec (JSON) with scenes and layers.
-Typical flow for an explainer from an existing facecam recording:
-1. create_project (or list_projects) → 2. import_media with the file path of the recording → 3. add_facecam
-→ 4. transcribe, then job_status until done (the transcript is saved into the project automatically)
-→ 5. get_transcript: cut filler words and pauses with apply_patch ({"op":"cuts"} or {"op":"cut"}), times are SOURCE times of the recording
-→ 6. add titles/graphics with apply_patch, anchored to words ("anchor": {"word": "<id>", "offset": -0.2}) → 7. export_video, job_status.
-Read spec_reference once before writing patches. Every change shows up live in the editor (editor_url).`;
+const INSTRUCTIONS = `Open Motion: motion graphics as code. A video is a Motion-Spec (JSON) with scenes and layers; you change it with patches and the editor shows every change live (editor_url).
+Work like a top motion director:
+1. BRIEF: who watches, where it plays (format), length, the one takeaway, real assets/facts. Ask at most 4 short questions, each with a default; if the user skips, use the defaults.
+2. DIRECTION: read spec_reference and list_styles. Propose 3 directions (style id + one-line concept) and let the user pick, unless they already said what they want.
+3. SETUP: create_project with format and style (or set them), import_media + add_facecam for recordings, transcribe → job_status.
+4. BEAT SHEET: plan hook (0–1 s) → points (a new visual idea every 2–4 s) → payoff → end card, with times and a motion verb per element.
+5. BUILD with apply_patch (big batches are fine). For recordings: anchor graphics to words, captions, cut fillers.
+6. LOOK & FIX: call look (frames as images). Be a harsh motion director, not a proud author: score hook, readability at phone size, hierarchy, spacing/overlaps, safe area, pace, polish (1–10). Fix the 3 worst issues, look again, repeat until everything is ≥ 8.
+7. export_video → job_status → give the user the link.
+Images: if Open Motion has no image key (spec_reference says so) but you have an image MCP (e.g. Kie AI), generate the image there, save it, import_media it and use the asset path.`;
+
+/** A tool result that is not plain text (e.g. images). */
+class McpContent {
+  items: Record<string, unknown>[];
+  constructor(items: Record<string, unknown>[]) { this.items = items; }
+}
 
 interface Tool { name: string; description: string; inputSchema: Record<string, unknown>; run: (a: any, c: Ctx) => Promise<unknown> }
 interface Ctx extends ServerContext { baseUrl: string }
@@ -51,11 +62,12 @@ const TOOLS: Tool[] = [
   },
   {
     name: "create_project",
-    description: "Create a new project. template \"blank\" (default) or \"example\" (explainer with facecam). lang \"de\" or \"en\" sets the language of texts the AI writes.",
-    inputSchema: obj({ title: { type: "string" }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
+    description: "Create a new project. format: 16:9 (default, YouTube), 9:16 (Shorts/Reels/TikTok), 1:1, 4:5 (feed). style: a style id from list_styles (sets palette, background and fonts). template \"example\" = explainer demo. lang \"de\"/\"en\" = language of on-screen texts.",
+    inputSchema: obj({ title: { type: "string" }, format: { type: "string", enum: [...FORMATS] }, style: { type: "string" }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
     run: async (a, c) => {
-      const info = await c.store.create(String(a.title ?? ""), a.template === "example" ? "example" : "blank", a.lang === "en" ? "en" : "de");
-      return { ...info, editor_url: editorUrl(c, info.id) };
+      if (a.style && !getStyle(String(a.style))) throw new Error(`Unknown style "${a.style}". Available: ${STYLES.map((s) => s.id).join(", ")}`);
+      const info = await c.store.create(String(a.title ?? ""), a.template === "example" ? "example" : "blank", a.lang === "en" ? "en" : "de", { format: FORMATS.includes(a.format) ? a.format : undefined, style: a.style });
+      return { ...info, editor_url: editorUrl(c, info.id), next: "Read spec_reference, then build with apply_patch and check with look." };
     },
   },
   {
@@ -86,11 +98,21 @@ const TOOLS: Tool[] = [
     description: "Reference: layer types, fields, animations, eases and all patch operations. Read once before using apply_patch.",
     inputSchema: obj({ project: { ...project, description: "Optional: adds canvas size and palette of this project" } }),
     run: async (a, c) => {
-      const spec = a.project ? (await c.store.read(a.project)).spec : undefined;
-      const rules = systemPrompt(spec ?? ({ meta: { lang: "de" }, canvas: { width: 1920, height: 1080, fps: 30 }, scenes: [], layers: [] } as unknown as MotionSpec));
-      const fromRules = rules.slice(rules.indexOf("REGELN"));
-      const doc = existsSync(SPEC_DOC) ? readFileSync(SPEC_DOC, "utf8") : "";
-      return `${fromRules}\n\nTEXT-SCHNITT (Transkript)\n{"op":"cut","t0":1.2,"t1":1.6,"reason":"filler"}  {"op":"uncut","t0":…,"t1":…}  {"op":"cuts","set":[…]} (ersetzt alle)\n{"op":"word","id":"w12","text":"korrigiert"}\nZeiten von Schnitten und Wörtern sind Zeiten in der ORIGINAL-Aufnahme.\n\n${doc}`;
+      const spec = a.project ? (await c.store.read(a.project)).spec : ({ meta: { title: "", lang: "de" }, canvas: { width: 1920, height: 1080, fps: 30 }, scenes: [], layers: [] } as unknown as MotionSpec);
+      return motionGuide(spec, { images: imagesAvailable(await c.settings.read()), viaMcp: true });
+    },
+  },
+  {
+    name: "list_styles",
+    description: "The style library: 14 complete art directions (palette, Google font pair, motion signature, texture, do/don't). Pick one per video and follow it.",
+    inputSchema: obj({ id: { type: "string", description: "Optional: one style in full detail" } }),
+    run: async (a) => {
+      if (a.id) {
+        const st = getStyle(String(a.id));
+        if (!st) throw new Error(`Unknown style "${a.id}". Available: ${STYLES.map((s) => s.id).join(", ")}`);
+        return styleBrief(st);
+      }
+      return STYLES.map((s) => `${s.id} — ${s.name.en}: ${s.mood.en}. Fonts ${s.fonts.display} + ${s.fonts.body}. Accent ${s.palette.accent}. ~${s.motion.bpm} BPM.`).join("\n");
     },
   },
   {
@@ -214,6 +236,31 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "add_captions",
+    description: "Add word-by-word captions from the transcript (phrases, active word highlighted, follow cuts), placed for the format and styled like the project. Tweak afterwards with apply_patch (set style.*, words, active.*).",
+    inputSchema: obj({ project }, ["project"]),
+    run: async (a, c) => {
+      const { spec } = await c.store.read(a.project);
+      if (!spec.transcript?.words.length) throw new Error("No transcript yet. Use transcribe first.");
+      const taken = new Set(spec.layers.map((l) => l.id));
+      const layer = captionsLayer(spec, unique("captions", taken));
+      return { ...(await save(c, a.project, [{ op: "add", layer }])), layer: layer.id };
+    },
+  },
+  {
+    name: "look",
+    description: "SEE the video: renders still frames (half size) and returns them as images. Use it after building or changing something and judge it like a demanding motion designer: hierarchy, spacing, contrast, overlap, empty frames, text cut off, timing. Then fix with apply_patch and look again. Without times: 6 frames spread over the video.",
+    inputSchema: obj({ project, times: { type: "array", items: { type: "number" }, description: "Seconds to look at (max 12), e.g. the moment after each entrance" } }, ["project"]),
+    run: async (a, c) => {
+      const { spec } = await c.store.read(a.project);
+      const shots = await renderFrames(spec, c.store.dir(a.project), Array.isArray(a.times) ? a.times.map(Number).filter(Number.isFinite) : undefined);
+      return new McpContent(shots.flatMap((sh) => [
+        { type: "text", text: `t = ${sh.t.toFixed(2)} s` },
+        { type: "image", data: sh.png.toString("base64"), mimeType: "image/png" },
+      ]));
+    },
+  },
+  {
     name: "editor_url",
     description: "Link to open the project in the editor (shows changes live).",
     inputSchema: obj({ project }, ["project"]),
@@ -224,9 +271,15 @@ const TOOLS: Tool[] = [
 /** Applies ops to the saved spec and saves it. Throws with the exact patch error if anything is invalid. */
 async function save(c: Ctx, id: string, ops: PatchOp[]) {
   const { spec } = await c.store.read(id);
-  const res = applyPatch(spec, ops);
+  let res = applyPatch(spec, ops);
+  const fonts = process.env.OPENMOTION_NO_FONT_DOWNLOAD === "1" ? null : await ensureFonts(res.spec, c.store.dir(id)).catch(() => null);
+  if (fonts?.op) res = { ...applyPatch(res.spec, [fonts.op]), changed: res.changed };
   const saved = await c.store.saveSpec(id, res.spec);
-  return { ok: true, changed: res.changed, warnings: saved.warnings, duration: r(compositionDuration(res.spec)) };
+  return {
+    ok: true, changed: res.changed, warnings: saved.warnings, duration: r(compositionDuration(res.spec)),
+    ...(fonts?.added.length ? { fonts_added: fonts.added } : {}),
+    ...(fonts?.missing.length ? { fonts_missing: fonts.missing, hint: "These fonts are not on Google Fonts; pick another family." } : {}),
+  };
 }
 
 /** Folders the import may read from: OPENMOTION_IMPORT_DIRS (":"-separated), else the home folder (not in Docker). */
@@ -280,6 +333,7 @@ export async function handleRpc(msg: Rpc, c: Ctx): Promise<object | null> {
       if (!tool) return fail(-32602, `Unknown tool "${msg.params?.name}". Available: ${TOOLS.map((t) => t.name).join(", ")}`);
       try {
         const out = await tool.run(msg.params?.arguments ?? {}, c);
+        if (out instanceof McpContent) return reply({ content: out.items });
         return reply({ content: [{ type: "text", text: typeof out === "string" ? out : JSON.stringify(out, null, 2) }] });
       } catch (e) {
         return reply({ content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true });

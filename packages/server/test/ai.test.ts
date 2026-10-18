@@ -109,6 +109,7 @@ test("helpers: JSON extraction, prompt knows the canvas and palette", () => {
   assert.deepEqual(extractJson('Hier:\n```json\n{"message":"a","ops":[]}\n```\nfertig'), { message: "a", ops: [] });
   assert.throws(() => extractJson("nope"), /kein JSON/);
   const p = systemPrompt(example);
-  assert.match(p, /1920×1080 px/);
+  assert.match(p, /1920×1080/);
+  assert.match(p, /SELF-CHECK/);
   assert.match(p, /\$accent/);
 });

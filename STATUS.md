@@ -16,6 +16,9 @@ October 2026 · Beta 0.1
 | AI without key | Claude Code and Codex CLI as AI providers (your subscription) | Claude Code live; Codex with a simulated CLI |
 | Installer | One line for Linux, macOS, Windows: Node, FFmpeg, Whisper, start icon, AI tools connected | Linux end to end (install, update, Whisper, MCP, export); macOS/Windows not on real machines |
 | MCP | MCP server at /mcp + stdio bridge, live update in the editor | Claude Code live over HTTP, real browser; Codex/Hermes not live yet |
+| AI director | Master prompt, 14 styles, interview form, voice input, follow-up questions as forms, self-review with rendered frames (editor + MCP `look`) | Claude Code live (showcase in the README built this way); Codex review not live |
+| Motion engine 2 | Text by word/letter/line, highlight + marker, counters, SVG drawing, masks/iris, 3D tilt, blur, camera, glow/shadow/glass, textures, springs, formats 16:9/9:16/1:1/4:5, captions, Google Fonts stored locally | Unit tests + MP4 exports checked frame by frame |
+| Kie AI | Key with credit display, Kie MCP detection in Claude Code/Codex/Hermes | Config-file tests; real key not tested |
 
 ## 🔄 In progress
 

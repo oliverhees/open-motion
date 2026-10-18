@@ -8,8 +8,11 @@ export function describe(spec: MotionSpec): string {
   const scenes = sceneTimings(spec);
   const lines: string[] = [];
   const c = spec.canvas;
-  lines.push(`Project "${spec.meta.title}" — canvas ${c.width}×${c.height}, ${c.fps} fps`);
+  lines.push(`Project "${spec.meta.title}" — canvas ${c.width}×${c.height}, ${c.fps} fps${spec.meta.style ? `, style ${spec.meta.style}` : ""}`);
   if (spec.style?.palette) lines.push(`Palette: ${Object.entries(spec.style.palette).map(([k, v]) => `$${k}=${v}`).join(", ")}`);
+  if (spec.style?.fonts?.length) lines.push(`Fonts: ${[...new Set(spec.style.fonts.map((x) => x.family))].join(", ")}`);
+  if (c.texture) lines.push(`Texture: ${Object.entries(c.texture).map(([k, v]) => `${k} ${v}`).join(", ")}`);
+  if (spec.camera) lines.push(`Camera keys: ${Object.entries(spec.camera.keys).map(([k, v]) => `${k} ${(v ?? []).map((x) => `${f(x.t)}s=${x.v}`).join("→")}`).join("; ")}`);
   lines.push("Scenes:");
   for (const s of spec.scenes) {
     const t = scenes.get(s.id)!;
@@ -28,10 +31,19 @@ export function describe(spec: MotionSpec): string {
       const k = Object.keys(l.keys ?? {});
       if (k.length) line += ` keys: ${k.join(",")}`;
     }
-    if (l.type === "text") line += ` text "${clip(l.text)}"`;
+    if (l.type === "text") line += l.count ? ` counter ${l.count.from}→${l.count.to}` : ` text "${clip(l.text)}"`;
+    if (l.type === "text" && l.anim) line += ` anim ${l.anim.type}/${l.anim.by ?? "word"}`;
+    if (l.type === "text" && l.style.fontFamily) line += ` font "${l.style.fontFamily}"`;
+    if (l.type === "svg" && l.draw) line += " draws itself";
+    if (l.type === "captions") line += ` captions ${l.words ?? 3} words/phrase`;
+    if (l.type !== "audio" && l.look) line += ` look ${Object.keys(l.look).join(",")}`;
+    if (l.fixed) line += " fixed";
+    if (l.in) line += ` in:${l.in.type}`;
+    if (l.out) line += ` out:${l.out.type}`;
     if (l.type === "image" || l.type === "video" || l.type === "audio") line += ` src ${l.src}`;
     if (l.type === "image" && l.source?.prompt) line += ` prompt "${clip(l.source.prompt)}"`;
     if (l.hidden) line += " (hidden)";
+    if (l.meta?.placeholder) line += " (PLACEHOLDER: replace or remove when building)";
     lines.push(line);
   }
   if (spec.transcript?.words.length) {

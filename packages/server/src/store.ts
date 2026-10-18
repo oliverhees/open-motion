@@ -13,7 +13,8 @@ import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { compositionDuration, validateSpec, SpecError, type MotionSpec, type Layer } from "@openmotion/core";
+import { applyPatch, compositionDuration, validateSpec, SpecError, FORMAT_SIZE, getStyle, type Format, type MotionSpec, type Layer } from "@openmotion/core";
+import { ensureFonts } from "./fonts.ts";
 import { probe } from "./media.ts";
 
 export interface ProjectInfo {
@@ -76,15 +77,20 @@ export class Store {
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
-  async create(title: string, template: "blank" | "example", lang: "de" | "en" = "en"): Promise<ProjectInfo> {
+  async create(title: string, template: "blank" | "example", lang: "de" | "en" = "en", opts: { format?: Format; style?: string } = {}): Promise<ProjectInfo> {
     const clean = title.trim().slice(0, 120) || (lang === "de" ? "Neues Projekt" : "New project");
     const id = `${slug(clean)}-${randomBytes(3).toString("hex")}`;
     const dir = path.join(this.root, id);
     for (const sub of ["renders", "history", ...ASSET_DIRS.map((a) => `assets/${a}`)]) await mkdir(path.join(dir, sub), { recursive: true });
     let spec: MotionSpec;
     if (template === "example") spec = await this.copyExample(dir);
-    else spec = blankSpec(lang);
+    else spec = blankSpec(lang, opts);
     spec.meta.title = clean;
+    // The style's fonts are fetched right away, so the first preview already looks right.
+    if (opts.style && process.env.OPENMOTION_NO_FONT_DOWNLOAD !== "1") {
+      const fonts = await ensureFonts(spec, dir).catch(() => null);
+      if (fonts?.op) spec = applyPatch(spec, [fonts.op]).spec;
+    }
     const now = new Date().toISOString();
     const info: ProjectInfo = { id, title: clean, createdAt: now, updatedAt: now };
     await writeJson(path.join(dir, "project.json"), info);
@@ -218,30 +224,58 @@ export class Store {
   }
 }
 
-export function blankSpec(lang: "de" | "en" = "en"): MotionSpec {
+/**
+ * A fresh project. With a style it already looks designed: style palette and fonts, a radial glow,
+ * a masked headline with a marker highlight. Starter layers carry meta.placeholder so the AI replaces them.
+ */
+export function blankSpec(lang: "de" | "en" = "en", opts: { format?: Format; style?: string } = {}): MotionSpec {
   const de = lang === "de";
-  return {
+  const { width: W, height: H } = FORMAT_SIZE[opts.format ?? "16:9"];
+  const st = getStyle(opts.style);
+  const vertical = H > W;
+  const m = Math.round(Math.min(W, H) * 0.08);
+  const ph = { placeholder: true };
+  // Narrow canvases (1:1, 4:5, 9:16) get three explicit lines, landscape two. The size is chosen so the
+  // longest line fits (≈ 0.75 em per character, or the style's displayWidth for very wide fonts), so it never wraps.
+  const narrow = W / H < 1.2;
+  const dw = st?.fonts.displayWidth ?? 0.75;
+  const first = vertical && dw > 0.7 ? (de ? "Dein\nVideo," : "Your\nvideo,") : de ? "Dein Video," : "Your video,"; // very wide font in portrait: 4 lines
+  const text = de ? (narrow ? `${first}\n[[großartig]]\nerzählt.` : `${first}\n[[großartig]] erzählt.`) : (narrow ? `${first}\n[[beautifully]]\ntold.` : `${first}\n[[beautifully]] told.`);
+  const lines = text.split("\n").length;
+  const longest = Math.max(...text.replace(/\[\[|\]\]/g, "").split("\n").map((l) => l.length));
+  const big = Math.min(Math.round(Math.min(W, H) * 0.15), Math.floor((W - 2 * m) / (longest * dw)));
+  const body = Math.max(Math.round(big * 0.32), vertical ? 44 : narrow ? 36 : 40);
+  const top = Math.round(H * (vertical ? 0.3 : narrow ? 0.26 : 0.32));
+  const spec: MotionSpec = {
     version: 1,
-    meta: { title: de ? "Neues Projekt" : "New project", lang },
-    canvas: { width: 1920, height: 1080, fps: 30, background: "$bg" },
-    style: { palette: { bg: "#111827", ink: "#F9FAFB", accent: "#38BDF8", soft: "#94A3B8" } },
+    meta: { title: de ? "Neues Projekt" : "New project", lang, ...(st ? { style: st.id } : {}) },
+    canvas: { width: W, height: H, fps: 30, background: "$bg", ...(st?.texture ? { texture: st.texture } : {}) },
+    style: { palette: st ? { ...st.palette } : { bg: "#111827", surface: "#1F2937", ink: "#F9FAFB", muted: "#94A3B8", accent: "#38BDF8" } },
     scenes: [{ id: "s1", name: de ? "Szene 1" : "Scene 1", duration: 5 }],
     layers: [
-      { id: "bg", name: de ? "Hintergrund" : "Background", type: "shape", shape: "rect", track: 0, start: 0, duration: 5, locked: true, frame: { x: 0, y: 0, w: 1920, h: 1080 }, fill: "$bg" },
+      { id: "bg", name: de ? "Hintergrund" : "Background", type: "shape", shape: "rect", track: 0, start: 0, duration: 5, locked: true, frame: { x: 0, y: 0, w: W, h: H }, fill: "$bg" },
       {
-        id: "title", name: de ? "Titel" : "Title", type: "text", scene: "s1", track: 5, start: 0.3, duration: 4.5,
-        frame: { x: 160, y: 380, w: 1600, h: 220 }, text: de ? "Dein Titel" : "Your title",
-        style: { fontSize: 120, fontWeight: 800, color: "$ink", align: "center", valign: "middle" },
-        in: { type: "slideUp", duration: 0.7 }, out: { type: "fade", duration: 0.4 },
+        id: "glow", name: "Glow", type: "shape", shape: "ellipse", track: 1, start: 0, duration: 5, meta: ph,
+        frame: { x: Math.round(W * 0.45), y: Math.round(H * -0.1), w: Math.round(Math.max(W, H) * 0.7), h: Math.round(Math.max(W, H) * 0.7), opacity: 0.35 },
+        fill: "radial-gradient(circle, $accent 0%, transparent 65%)", in: { type: "fade", duration: 1.2 },
       },
       {
-        id: "sub", name: de ? "Untertitel" : "Subtitle", type: "text", scene: "s1", track: 5, start: 0.8, duration: 4,
-        frame: { x: 360, y: 620, w: 1200, h: 80 }, text: de ? "Doppelklick zum Bearbeiten" : "Double-click to edit",
-        style: { fontSize: 44, fontWeight: 500, color: "$accent", align: "center", valign: "middle" },
-        in: { type: "fade", duration: 0.6 }, out: { type: "fade", duration: 0.4 },
+        id: "title", name: de ? "Titel" : "Title", type: "text", scene: "s1", track: 5, start: 0.3, duration: 4.5, meta: ph,
+        frame: { x: m, y: top, w: W - 2 * m, h: Math.round(big * 1.05 * lines + big * 0.3) },
+        text,
+        style: { fontSize: big, fontWeight: st?.fonts.displayWeight ?? 800, color: "$ink", lineHeight: 1.02, letterSpacing: Math.round(-big * 0.03), highlight: "$accent", ...(st ? { fontFamily: st.fonts.display } : {}) },
+        anim: { type: "mask", by: "word", stagger: 0.08, duration: 0.8, ease: "expo.out" }, out: { type: "fade", duration: 0.4 },
+      },
+      {
+        id: "sub", name: de ? "Untertitel" : "Subtitle", type: "text", scene: "s1", track: 5, start: 1.1, duration: 3.7, meta: ph,
+        frame: { x: m, y: Math.round(top + big * 1.05 * lines + big * 0.6), w: W - 2 * m, h: Math.round(body * 1.3 * 2) },
+        text: de ? "Schreib links in den Chat, was du willst." : "Tell the chat on the left what you want.",
+        style: { fontSize: body, fontWeight: st?.fonts.bodyWeight ?? 400, color: "$muted", ...(st ? { fontFamily: st.fonts.body } : {}) },
+        in: { type: "fade", duration: 0.8 }, out: { type: "fade", duration: 0.4 },
       },
     ],
   };
+  return spec;
 }
 
 export class HttpError extends Error {

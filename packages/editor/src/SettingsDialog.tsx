@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
+import { api, type Integrations, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
 import { useT, type Key } from "./i18n.ts";
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
@@ -25,6 +25,8 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
   const [tokName, setTokName] = useState("");
   const [fresh, setFresh] = useState<string | null>(null);
   useEffect(() => { api.tokens().then(setTokens).catch(() => setTokens(null)); }, []);
+  const [integ, setInteg] = useState<Integrations | null>(null);
+  useEffect(() => { api.integrations().then(setInteg).catch(() => setInteg(null)); }, []);
   const makeToken = async () => {
     try {
       const r = await api.createToken(tokName || "KI");
@@ -47,7 +49,7 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
     setError(null);
     try {
       const filled = { ...Object.fromEntries(Object.entries(keys).filter(([, v]) => v.trim())), ...extra };
-      const r = await api.saveSettings({ transcription: s.transcription, ai: { provider: s.ai.provider, model: s.ai.model ?? "" }, images: { provider: s.images.provider, model: s.images.model ?? "" }, keys: filled });
+      const r = await api.saveSettings({ transcription: s.transcription, ai: { provider: s.ai.provider, model: s.ai.model ?? "", review: s.ai.review !== false }, images: { provider: s.images.provider, model: s.images.model ?? "" }, keys: filled });
       setS(r);
       setKeys({});
       onSaved(r);
@@ -73,6 +75,10 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
             <input value={s.ai.model ?? ""} placeholder={LLM_DEFAULTS[s.ai.provider]} onChange={(e) => setS({ ...s, ai: { ...s.ai, model: e.target.value } })} aria-label={t_("model")} />
           </div>
           {CLI_LLMS.includes(s.ai.provider) && <p className="muted" style={{ margin: "4px 0 0" }}>{t_("cliNote")}</p>}
+          <label className="check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
+            <input type="checkbox" style={{ width: "auto", marginTop: 2 }} checked={s.ai.review !== false} onChange={(e) => setS({ ...s, ai: { ...s.ai, review: e.target.checked } })} />
+            <span>{t_("reviewSetting")}</span>
+          </label>
           <h3>{t_("imageModel")}</h3>
           <div className="pair">
             <select value={s.images.provider} onChange={(e) => setS({ ...s, images: { ...s.images, provider: e.target.value as ImageProvider, model: "" } })}>
@@ -80,6 +86,14 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
             </select>
             <input value={s.images.model ?? ""} placeholder={IMG_DEFAULTS[s.images.provider]} onChange={(e) => setS({ ...s, images: { ...s.images, model: e.target.value } })} aria-label={t_("model")} />
           </div>
+          {integ && (
+            <div className="integ">
+              <span className={integ.images ? "ok" : "warn"}>{integ.images ? `✓ ${t_("imgReady")}` : `○ ${t_("imgOff")}`}</span>
+              {integ.kieCredits !== null && <span>Kie.ai: {t_("kieCredits", { n: Math.round(integ.kieCredits) })}</span>}
+              {integ.kieMcp.length > 0 && <span>✓ {t_("kieMcpFound", { where: integ.kieMcp.map((x) => `${x.tool} (${x.name})`).join(", ") })}</span>}
+              {integ.mcps.length > 0 && <small className="muted">{t_("mcpsFound", { list: [...new Set(integ.mcps.map((x) => x.tool))].join(", ") })}</small>}
+            </div>
+          )}
         </div>
         <div className="sec">
           <h3>{t_("transcript")}</h3>

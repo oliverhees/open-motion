@@ -27,7 +27,8 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
 
 export interface Settings {
   transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> };
-  ai: { provider: LlmProvider; model?: string };
+  /** review: look-and-fix pass after bigger builds (default on). */
+  ai: { provider: LlmProvider; model?: string; review?: boolean };
   images: { provider: ImageProvider; model?: string };
   keys: Partial<Record<KeyName, string>>;
 }
@@ -73,6 +74,7 @@ export class SettingsStore {
     }
     if (patch.ai?.provider && LLM_PROVIDERS.includes(patch.ai.provider)) cur.ai.provider = patch.ai.provider;
     if (patch.ai && typeof patch.ai.model === "string") cur.ai.model = patch.ai.model.slice(0, 120) || undefined;
+    if (patch.ai && typeof patch.ai.review === "boolean") cur.ai.review = patch.ai.review;
     if (patch.images?.provider && IMAGE_PROVIDERS.includes(patch.images.provider)) cur.images.provider = patch.images.provider;
     if (patch.images && typeof patch.images.model === "string") cur.images.model = patch.images.model.slice(0, 120) || undefined;
     for (const k of KEY_NAMES) {

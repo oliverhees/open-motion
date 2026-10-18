@@ -2,15 +2,26 @@ import type { MotionSpec } from "@openmotion/core";
 
 export interface ProjectInfo { id: string; title: string; createdAt: string; updatedAt: string; duration?: number }
 export interface Comment { id: string; t: number; layer?: string; x?: number; y?: number; text: string; toAI: boolean; status: "open" | "queued" | "done"; createdAt: string; reply?: string }
-export interface ChatEntry { id: string; role: "user" | "assistant" | "error"; text: string; at: string; changed?: string[]; images?: string[]; ops?: number; undone?: boolean }
-export interface AgentResult { message: string; ops: import("@openmotion/core").PatchOp[]; changed: string[]; images: string[]; attempts: number }
+export interface Integrations { images: boolean; imageProvider: string; kieCredits: number | null; mcps: { tool: string; name: string }[]; kieMcp: { tool: string; name: string }[] }
+/** A question the AI asks back; shown as a form in the chat. */
+export interface AskQuestion { id: string; q: string; options: string[]; multi?: boolean; free?: boolean }
+export interface ChatEntry {
+  id: string; role: "user" | "assistant" | "error"; text: string; at: string; changed?: string[]; images?: string[]; ops?: number; undone?: boolean;
+  ask?: AskQuestion[]; answered?: boolean; review?: { score: number; fixes: number };
+}
+export interface AgentResult {
+  message: string; ops: import("@openmotion/core").PatchOp[]; changed: string[]; images: string[]; attempts: number;
+  ask?: AskQuestion[]; missingFonts?: string[]; review?: { scores: Record<string, number>; fixes: number };
+}
 export interface Asset { path: string; kind: "images" | "video" | "audio" | "fonts"; size: number; duration?: number; width?: number; height?: number; hasAudio?: boolean }
 export interface UploadResult extends Asset { converted: boolean; hasVideo: boolean }
 export type Provider = "local" | "openai" | "elevenlabs" | "groq" | "deepgram";
 export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex";
 export type ImageProvider = "kie" | "openai" | "openrouter" | "gemini";
-export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }> }
-export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number }
+export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string; review?: boolean }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }> }
+export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number; progress?: AiProgress }
+/** Live state of the AI while it works (from the server, translated in the chat). */
+export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image" | "review"; text?: string; ops?: number; n?: number; of?: number }
 export interface TranscriptResult { source: string; language?: string; provider: string; words: { id: string; text: string; t0: number; t1: number }[] }
 export interface ExportRequest { format: "mp4" | "gif"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean }
 export interface RenderPlan { workers: number; gpu: boolean; reason: string; info?: { cores: number; container: boolean; memGB: number; load: number; limit: "cpu" | "ram" | "cap" | "forced"; gpuName?: string } }
@@ -19,7 +30,7 @@ export interface Job { id: string; status: "queued" | "running" | "done" | "erro
 
 /** Every request carries x-om: 1 (CSRF protection). A 401 sends the app back to the login screen. */
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, { ...init, headers: { "content-type": "application/json", "x-om": "1" } });
+  const r = await fetch(url, { ...init, headers: { "content-type": "application/json", ...(init?.headers as Record<string, string> | undefined), "x-om": "1" } });
   const body = await r.json().catch(() => ({}));
   if (r.status === 401 && !url.startsWith("/api/auth/")) window.dispatchEvent(new Event("om-auth"));
   if (!r.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${r.status}`);
@@ -28,7 +39,11 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   list: () => req<ProjectInfo[]>("/api/projects"),
-  create: (title: string, template: "blank" | "example", lang?: string) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang }) }),
+  create: (title: string, template: "blank" | "example", lang?: string, format?: string, style?: string) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang, format, style }) }),
+  /** Voice → text (local Whisper or the configured service). */
+  dictate: (audio: Blob, lang: string) => req<Task<{ text: string }>>(`/api/dictate?lang=${encodeURIComponent(lang)}`, { method: "POST", body: audio, headers: { "content-type": audio.type || "audio/webm" } }),
+  integrations: () => req<Integrations>("/api/integrations"),
+  fontUrl: (family: string) => `/api/fontfile/${encodeURIComponent(family)}`,
   read: (id: string) => req<{ project: ProjectInfo; spec: MotionSpec; comments: Comment[] }>(`/api/projects/${id}`),
   rev: (id: string) => req<{ updatedAt: string }>(`/api/projects/${id}/rev`),
   saveSpec: (id: string, spec: MotionSpec) => req<{ warnings: string[]; updatedAt: string }>(`/api/projects/${id}/spec`, { method: "PUT", body: JSON.stringify(spec) }),
@@ -54,12 +69,12 @@ export const api = {
   ai: (id: string, body: unknown) => req<Task<AgentResult>>(`/api/projects/${id}/ai`, { method: "POST", body: JSON.stringify(body) }),
   aiImage: (id: string, body: { prompt: string; w: number; h: number }) => req<Task<{ path: string; provider: string; model: string }>>(`/api/projects/${id}/ai/image`, { method: "POST", body: JSON.stringify(body) }),
   /** Polls a background task until it is done; throws its error. */
-  wait: async <T,>(task: Task<T>, onTick?: () => void): Promise<T> => {
+  wait: async <T,>(task: Task<T>, onTick?: (t: Task<T>) => void): Promise<T> => {
     let t = task;
     while (t.status === "queued" || t.status === "running") {
       await new Promise((r) => setTimeout(r, 1000));
-      onTick?.();
       t = await req<Task<T>>(`/api/tasks/${t.id}`);
+      onTick?.(t);
     }
     if (t.status === "error" || t.result === undefined) throw new Error(t.error ?? "Aufgabe fehlgeschlagen");
     return t.result;

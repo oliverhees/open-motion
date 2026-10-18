@@ -8,5 +8,6 @@ export { evaluate, layerAt, propAt, baseValue, interpolate, type LayerState } fr
 export { applyPatch, valueAt, PatchError, type PatchOp, type PatchResult } from "./patch.ts";
 export { compile, sanitizeSvg, color, esc, type CompileOptions, type CompileResult, type AnimDef } from "./compile.ts";
 export { describe } from "./describe.ts";
-export { facecamFrame, facecamLayers, type FacecamLayout } from "./presets.ts";
+export { facecamFrame, facecamLayers, captionsLayer, type FacecamLayout } from "./presets.ts";
 export { normalizeCuts, removedBetween, isCutLayer, keptSegments, findSuggestions, wordRange, isWordCut, subtractCut, type Segment, type Suggestion } from "./cuts.ts";
+export { STYLES, FORMATS, FORMAT_SIZE, getStyle, styleBrief, type StyleDef, type Format } from "./styles.ts";

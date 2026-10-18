@@ -13,6 +13,7 @@ interface Props {
   apply: (ops: PatchOp[], key?: string) => void; seek: (t: number) => void;
   onUpload: (files: File[]) => void; onRecord: () => void; onAdd: (a: Asset, as?: "facecam" | "audio") => void;
   onTranscribe: (source: string, provider: Provider, language: string) => void;
+  onAddCaptions: () => void;
 }
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
@@ -122,6 +123,7 @@ export function MediaTab(p: Props) {
         {p.stt.status === "error" && <p className="err" style={{ margin: 0 }}>{p.stt.error}</p>}
         {words.length === 0 ? <p className="muted" style={{ margin: 0 }}>{t_("noTranscript")}</p> : (
           <>
+            {!p.spec.layers.some((l) => l.type === "captions") && <button onClick={p.onAddCaptions}>🗨️ {t_("addCaptions")}</button>}
             <div className="btnrow" style={{ alignItems: "center" }}>
               <button className={anchorMode ? "anchor-on" : ""} aria-pressed={anchorMode} onClick={() => { setMode((m) => (m === "anchor" ? "play" : "anchor")); setPick(null); }}><IAnchor />{t_("modeAnchor")}</button>
               <button className={mode === "cut" ? "cut-on" : ""} aria-pressed={mode === "cut"} onClick={() => { setMode((m) => (m === "cut" ? "play" : "cut")); setPick(null); }}>✂ {t_("modeCut")}</button>

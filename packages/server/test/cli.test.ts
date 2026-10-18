@@ -45,7 +45,7 @@ test("claude-code: agent runs through the CLI without any key, tools off, API ke
     assert.equal(log.args[0], "-p");
     assert.deepEqual(log.args.slice(log.args.indexOf("--tools"), log.args.indexOf("--tools") + 2), ["--tools", ""]);
     assert.ok(log.args.includes("--strict-mcp-config"));
-    assert.match(log.args[log.args.indexOf("--system-prompt") + 1], /Motion-Designer von OpenMotion/);
+    assert.match(log.args[log.args.indexOf("--system-prompt") + 1], /motion director of Open Motion/);
     assert.equal(log.args[log.args.indexOf("--model") + 1], "opus");
     assert.match(log.stdin, /AUSGEWÄHLTE EBENE[\s\S]*"id":"s1-icon"/);
     assert.equal(log.apiKey, null);
@@ -107,4 +107,11 @@ test("CLI errors say what to do: missing program, not logged in", async () => {
   } finally {
     delete process.env.OPENMOTION_CODEX_BIN;
   }
+});
+
+test("liveSummary: shows the half-written answer and counts the changes built so far", async () => {
+  const { liveSummary } = await import("../src/ai/cli.ts");
+  assert.deepEqual(liveSummary('{"message": "Dein Video hat jetzt \\"drei\\" Sze'), { phase: "writing", text: 'Dein Video hat jetzt "drei" Sze', ops: undefined });
+  assert.deepEqual(liveSummary('{"message": "Fertig.", "ops": [{"op":"add","layer":{}},{"op": "set"'), { phase: "writing", text: "Fertig.", ops: 2 });
+  assert.deepEqual(liveSummary(""), { phase: "writing", text: "", ops: undefined });
 });

@@ -33,6 +33,8 @@ export type PatchOp =
   | { op: "style"; set: NonNullable<MotionSpec["style"]> }
   | { op: "canvas"; set: Partial<MotionSpec["canvas"]> }
   | { op: "meta"; set: Partial<MotionSpec["meta"]> }
+  /** Set the camera (push-ins, pans, zoom to a target; absolute seconds). null removes it. */
+  | { op: "camera"; set: MotionSpec["camera"] | null }
   /** Replace the transcript (null removes it). Anchors on vanished words move to the nearest new word. */
   | { op: "transcript"; set: MotionSpec["transcript"] | null }
   /** Change one word (fix a typo). */
@@ -60,7 +62,7 @@ export class PatchError extends Error {
 }
 
 /** Fields that belong to the frame/timing "slot" and survive a content swap. */
-const SLOT_FIELDS = ["id", "name", "scene", "track", "start", "duration", "anchor", "keys", "in", "out", "hidden", "locked", "frame", "meta"];
+const SLOT_FIELDS = ["id", "name", "scene", "track", "start", "duration", "anchor", "keys", "in", "out", "hidden", "locked", "fixed", "look", "frame", "meta"];
 
 export function applyPatch(spec: MotionSpec, ops: PatchOp[]): PatchResult {
   const next: MotionSpec = structuredClone(spec);
@@ -172,6 +174,15 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
       if (op.removeLayers) spec.layers = spec.layers.filter((l) => l.scene !== op.id);
       else inside.forEach((l) => delete l.scene);
       inside.forEach((l) => changed.add(l.id));
+      return;
+    }
+    case "camera": {
+      if (op.set === null) delete spec.camera;
+      else {
+        if (!op.set || typeof op.set !== "object" || !op.set.keys) throw new PatchError(i, 'camera needs {"keys": {"zoom"|"x"|"y"|"rotation": [{"t": seconds, "v": value}]}} or null');
+        spec.camera = structuredClone(op.set);
+      }
+      spec.layers.forEach((l) => changed.add(l.id));
       return;
     }
     case "style": {

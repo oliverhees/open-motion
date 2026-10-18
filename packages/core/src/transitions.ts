@@ -12,18 +12,37 @@ export interface FxState {
   ty: number;
   scale: number;
   opacity: number;
-  /** Wipe: how much is cut off on the right, in percent. */
+  /** Masks: how much is cut off at each side, in percent (wipes, line reveals). */
+  clipTop: number;
   clipRight: number;
+  clipBottom: number;
+  clipLeft: number;
+  /** Iris mask: circle radius in percent (100 = fully open). */
+  iris: number;
   blur: number;
 }
 
 export type FxKey = keyof FxState;
 
-export const NEUTRAL_FX: FxState = { tx: 0, ty: 0, scale: 1, opacity: 1, clipRight: 0, blur: 0 };
+export const NEUTRAL_FX: FxState = { tx: 0, ty: 0, scale: 1, opacity: 1, clipTop: 0, clipRight: 0, clipBottom: 0, clipLeft: 0, iris: 100, blur: 0 };
 
 /** The "away" state a transition starts from (in) or ends at (out). */
 export function awayState(type: TransitionType, distance = 60): Partial<FxState> {
   switch (type) {
+    case "wipeLeft":
+      return { clipLeft: 100 };
+    case "wipeUp":
+      return { clipTop: 100 };
+    case "wipeDown":
+      return { clipBottom: 100 };
+    case "maskUp":
+      return { clipTop: 100, ty: distance };
+    case "iris":
+      return { iris: 0 };
+    case "zoomIn":
+      return { scale: 1.25, blur: 10, opacity: 0 };
+    case "zoomOut":
+      return { scale: 0.85, opacity: 0 };
     case "fade":
       return { opacity: 0 };
     case "slideUp":
@@ -52,7 +71,8 @@ export interface ResolvedTransition {
 
 export function resolveTransition(tr: Transition | undefined, dir: "in" | "out", speed: number): ResolvedTransition | undefined {
   if (!tr) return undefined;
-  const ease = tr.ease ?? (dir === "in" ? (tr.type === "pop" ? "back.out" : "power3.out") : "power2.in");
+  // Long-tail deceleration in, accelerate out. No bounce by default: overshoot reads cheap (opt in with "back.out").
+  const ease = tr.ease ?? (dir === "in" ? (tr.type === "pop" || tr.type === "zoomIn" || tr.type === "zoomOut" ? "expo.out" : "power3.out") : "power2.in");
   const duration = (tr.duration ?? (dir === "in" ? 0.5 : 0.4)) / speed;
   return { away: awayState(tr.type, tr.distance ?? 60), duration, ease };
 }

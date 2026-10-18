@@ -4,6 +4,8 @@
 
 import http from "node:http";
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { Store, HttpError, type Comment } from "./store.ts";
 import { sanitize, type ExportRequest } from "./jobs.ts";
@@ -18,7 +20,9 @@ import { Auth, sessionCookie } from "./auth.ts";
 import { FileQueue, type QueueJob } from "./queue.ts";
 import { workerFile, type WorkerInfo } from "./worker.ts";
 import { detectHardware, estimate, readStats } from "@openmotion/render";
-import type { MotionSpec } from "@openmotion/core";
+import { applyPatch, FORMATS, getStyle, type Format, type MotionSpec } from "@openmotion/core";
+import { ensureFonts, missingFamilies, previewFont } from "./fonts.ts";
+import { imagesAvailable, kieCredits, localMcps } from "./integrations.ts";
 
 export interface ServerOptions {
   dataDir: string;
@@ -142,6 +146,35 @@ export function createServer(opts: ServerOptions) {
             return { checks, report: formatReport(checks, s) };
           }));
         }
+        if (parts[1] === "integrations" && m === "GET") {
+          const s = await settings.read();
+          const mcps = localMcps();
+          return json(res, 200, { images: imagesAvailable(s), imageProvider: s.images.provider, kieCredits: await kieCredits(s), mcps, kieMcp: mcps.filter((x) => /kie/i.test(x.name)) });
+        }
+        if (parts[1] === "fontfile" && parts[2] && m === "GET") {
+          const file = await previewFont(parts[2], path.resolve(opts.dataDir, "fontcache"));
+          if (!file) throw new HttpError(404, "font not found");
+          res.setHeader("cache-control", "public, max-age=31536000, immutable");
+          return sendFile(req, res, file, false);
+        }
+        if (parts[1] === "dictate" && m === "POST") {
+          // Voice input (chat, interview): raw audio body → text, through the transcription queue.
+          const dir = path.resolve(opts.dataDir, "tmp");
+          await mkdir(dir, { recursive: true });
+          const file = path.join(dir, `dictate-${randomBytes(5).toString("hex")}.${/ogg/.test(String(req.headers["content-type"])) ? "ogg" : /mp4|m4a/.test(String(req.headers["content-type"])) ? "m4a" : "webm"}`);
+          let size = 0;
+          const chunks: Buffer[] = [];
+          for await (const c of req) {
+            size += (c as Buffer).length;
+            if (size > 25 * 1024 * 1024) throw new HttpError(413, "Aufnahme zu lang (max. 25 MB).");
+            chunks.push(c as Buffer);
+          }
+          if (!size) throw new HttpError(400, "leere Aufnahme");
+          await writeFile(file, Buffer.concat(chunks));
+          const lang = url.searchParams.get("lang") ?? undefined;
+          const job = await queue.enqueue("dictate", { file: path.basename(file), language: lang && /^[a-z]{2}$/.test(lang) ? lang : undefined });
+          return json(res, 202, view(job));
+        }
         if (parts[1] === "tasks" && parts[2] && m === "GET") {
           const task = tasks.get(parts[2]) ?? (/^[a-f0-9]{10}$/.test(parts[2]) ? await queue.get(parts[2]) : undefined);
           if (!task) throw new HttpError(404, "task not found");
@@ -155,8 +188,10 @@ export function createServer(opts: ServerOptions) {
         if (parts[1] === "projects" && parts.length === 2) {
           if (m === "GET") return json(res, 200, await store.list());
           if (m === "POST") {
-            const body = await readBody<{ title?: string; template?: string; lang?: string }>(req);
-            return json(res, 201, await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en"));
+            const body = await readBody<{ title?: string; template?: string; lang?: string; format?: string; style?: string }>(req);
+            const format = (FORMATS as readonly string[]).includes(body.format ?? "") ? (body.format as Format) : undefined;
+            const style = getStyle(body.style)?.id;
+            return json(res, 201, await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en", { format, style }));
           }
         }
         if (parts[1] === "projects" && parts[2]) {
@@ -164,7 +199,19 @@ export function createServer(opts: ServerOptions) {
           const sub = parts[3];
           if (!sub && m === "GET") return json(res, 200, await store.read(id));
           if (sub === "rev" && m === "GET") return json(res, 200, { updatedAt: await store.rev(id) });
-          if (sub === "spec" && m === "PUT") return json(res, 200, await store.saveSpec(id, await readBody<MotionSpec>(req)));
+          if (sub === "spec" && m === "PUT") {
+            const body = await readBody<MotionSpec>(req);
+            const saved = await store.saveSpec(id, body);
+            // A font typed in the editor is fetched in the background; the editor picks the update up live.
+            if (process.env.OPENMOTION_NO_FONT_DOWNLOAD !== "1" && missingFamilies(body).length) {
+              void ensureFonts(body, store.dir(id)).then(async (r) => {
+                if (!r.op) return;
+                const { spec: now } = await store.read(id);
+                await store.saveSpec(id, applyPatch(now, [r.op]).spec);
+              }).catch(() => {});
+            }
+            return json(res, 200, saved);
+          }
           if (sub === "comments" && m === "PUT") {
             await store.saveComments(id, await readBody<Comment[]>(req));
             return json(res, 200, { ok: true });
@@ -186,7 +233,7 @@ export function createServer(opts: ServerOptions) {
             if (!body?.spec || !["chat", "comment", "transcript"].includes(body.kind)) throw new HttpError(422, "kind und spec fehlen");
             const dir = store.dir(id);
             const s = await settings.read();
-            return json(res, 202, tasks.start("ai", () => runAgent(body, { settings: s, projectDir: dir })));
+            return json(res, 202, tasks.start("ai", (progress) => runAgent(body, { settings: s, projectDir: dir, onProgress: progress })));
           }
           if (sub === "ai" && parts[4] === "image" && m === "POST") {
             const body = await readBody<{ prompt?: string; w?: number; h?: number }>(req);

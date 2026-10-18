@@ -161,6 +161,8 @@ function signature(spec: MotionSpec): string {
     .map((l, i) => ({ l, i }))
     .filter((e) => !e.l.hidden)
     .sort((a, b) => a.l.track - b.l.track || a.i - b.i)
-    .map((e) => [e.l.id, e.l.type, e.l.track]);
-  return JSON.stringify([spec.canvas.width, spec.canvas.height, spec.style?.fonts ?? [], order, spec.transcript?.source ?? "", spec.transcript?.cuts ?? []]);
+    .map((e) => [e.l.id, e.l.type, e.l.track, !!e.l.fixed]);
+  // Camera box, texture overlays and captions (built from the transcript) are structure, too.
+  const caps = spec.layers.some((l) => l.type === "captions") ? spec.transcript?.words ?? [] : [];
+  return JSON.stringify([spec.canvas.width, spec.canvas.height, spec.canvas.texture ?? null, !!spec.camera, spec.style?.fonts ?? [], order, spec.transcript?.source ?? "", spec.transcript?.cuts ?? [], caps]);
 }
