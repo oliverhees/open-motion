@@ -8,12 +8,12 @@ import path from "node:path";
 export const PROVIDERS = ["local", "openai", "elevenlabs", "groq", "deepgram"] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const KEY_NAMES = ["openai", "elevenlabs", "groq", "deepgram", "anthropic", "openrouter", "gemini", "kie"] as const;
-export const LLM_PROVIDERS = ["anthropic", "openai", "openrouter", "claude-code", "codex"] as const;
+export const LLM_PROVIDERS = ["anthropic", "openai", "openrouter", "claude-code", "codex", "opencode"] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 export const IMAGE_PROVIDERS = ["kie", "openai", "openrouter", "gemini"] as const;
 export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
-/** CLI providers ("claude-code", "codex") use your subscription; empty model = the CLI's own default. */
-export const DEFAULT_LLM_MODELS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "" };
+/** CLI providers ("claude-code", "codex", "opencode") use your subscription/login; empty model = the CLI's own default. */
+export const DEFAULT_LLM_MODELS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "", opencode: "" };
 export const DEFAULT_IMAGE_MODELS: Record<ImageProvider, string> = { kie: "gpt-image-2-text-to-image", openai: "gpt-image-1", openrouter: "google/gemini-2.5-flash-image", gemini: "gemini-2.5-flash-image" };
 export type KeyName = (typeof KEY_NAMES)[number];
 
@@ -31,6 +31,8 @@ export interface Settings {
   ai: { provider: LlmProvider; model?: string; review?: boolean };
   images: { provider: ImageProvider; model?: string };
   keys: Partial<Record<KeyName, string>>;
+  /** Default brand for new projects (brand id). */
+  brand?: string;
 }
 
 export interface PublicSettings {
@@ -38,6 +40,7 @@ export interface PublicSettings {
   ai: Settings["ai"];
   images: Settings["images"];
   keys: Record<KeyName, { set: boolean; hint?: string }>;
+  brand?: string;
 }
 
 const DEFAULTS: Settings = { transcription: { provider: "local", language: "auto", models: {} }, ai: { provider: "anthropic" }, images: { provider: "kie" }, keys: {} };
@@ -56,6 +59,7 @@ export class SettingsStore {
       ai: { ...DEFAULTS.ai, ...(raw.ai ?? {}) },
       images: { ...DEFAULTS.images, ...(raw.images ?? {}) },
       keys: { ...(raw.keys ?? {}) },
+      ...(typeof raw.brand === "string" ? { brand: raw.brand } : {}),
     };
   }
 
@@ -64,7 +68,7 @@ export class SettingsStore {
   }
 
   /** Keys: a non-empty string sets it, "" or null deletes it, a missing field leaves it alone. */
-  async update(patch: { transcription?: Partial<Settings["transcription"]>; ai?: Partial<Settings["ai"]>; images?: Partial<Settings["images"]>; keys?: Partial<Record<KeyName, string | null>> }): Promise<PublicSettings> {
+  async update(patch: { transcription?: Partial<Settings["transcription"]>; ai?: Partial<Settings["ai"]>; images?: Partial<Settings["images"]>; keys?: Partial<Record<KeyName, string | null>>; brand?: string | null }): Promise<PublicSettings> {
     const cur = await this.read();
     if (patch.transcription) {
       const t = patch.transcription;
@@ -77,6 +81,8 @@ export class SettingsStore {
     if (patch.ai && typeof patch.ai.review === "boolean") cur.ai.review = patch.ai.review;
     if (patch.images?.provider && IMAGE_PROVIDERS.includes(patch.images.provider)) cur.images.provider = patch.images.provider;
     if (patch.images && typeof patch.images.model === "string") cur.images.model = patch.images.model.slice(0, 120) || undefined;
+    if (patch.brand === null || patch.brand === "") delete cur.brand;
+    else if (typeof patch.brand === "string" && /^[a-z0-9][a-z0-9-]{0,60}$/.test(patch.brand)) cur.brand = patch.brand;
     for (const k of KEY_NAMES) {
       if (!patch.keys || !(k in patch.keys)) continue;
       const v = patch.keys[k];
@@ -98,5 +104,5 @@ function toPublic(s: Settings): PublicSettings {
     const v = s.keys[k];
     keys[k] = v ? { set: true, hint: v.length > 8 ? `…${v.slice(-4)}` : "…" } : { set: false };
   }
-  return { transcription: s.transcription, ai: s.ai, images: s.images, keys };
+  return { transcription: s.transcription, ai: s.ai, images: s.images, keys, ...(s.brand ? { brand: s.brand } : {}) };
 }

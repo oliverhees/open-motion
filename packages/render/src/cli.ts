@@ -9,9 +9,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { applyPatch, describe, validateSpec, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { applyPatch, backgroundLayers, describe, LOTTIE_HINTS as LOTTIE_HINT, validateSpec, type MotionSpec, type PatchOp } from "@openmotion/core";
 import { buildComposition } from "./build.ts";
-import { estimate, renderVideo } from "./render.ts";
+import { estimate, renderVideo, type ExportFormat } from "./render.ts";
 
 const HELP = `OpenMotion — every element is a live-editable layer.
 
@@ -19,7 +19,7 @@ Usage:
   openmotion validate <spec.json>
   openmotion describe <spec.json>
   openmotion compile  <spec.json> -o <dir> [--scale 0.5]
-  openmotion render   <spec.json> -o <video.mp4> [--height 720|1080] [--fps 30] [--quality high|medium|low] [--format mp4|gif] [--sharp] [--keep]
+  openmotion render   <spec.json> -o <video.mp4> [--height 720|1080] [--fps 30] [--quality high|medium|low] [--format mp4|gif|webm|mov|lottie] [--keep-bg] [--hide id,id] [--sharp] [--keep]
   openmotion patch    <spec.json> <ops.json> [-o <out.json>]
 `;
 
@@ -34,6 +34,8 @@ async function main() {
       quality: { type: "string" },
       format: { type: "string" },
       sharp: { type: "boolean" },
+      "keep-bg": { type: "boolean" },
+      hide: { type: "string" },
       keep: { type: "boolean" },
       verbose: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
@@ -73,16 +75,21 @@ async function main() {
         height: values.height ? Number(values.height) : undefined,
         fps: values.fps ? Number(values.fps) : undefined,
         quality: (values.quality as "high" | "medium" | "low" | undefined) ?? "medium",
-        format: (values.format as "mp4" | "gif" | undefined) ?? "mp4",
+        format: (values.format as ExportFormat | undefined) ?? "mp4",
+        // webm/mov/lottie: transparent, full-canvas shapes hidden (like the editor), unless --keep-bg.
+        transparent: !values["keep-bg"],
+        hide: values.hide !== undefined ? values.hide.split(",").map((x) => x.trim()).filter(Boolean)
+          : ["webm", "mov", "lottie"].includes(values.format ?? "") && !values["keep-bg"] ? backgroundLayers(spec).filter((b) => b.hideByDefault).map((b) => b.id) : undefined,
         sharpText: values.sharp,
         keepBuild: values.keep,
         onLog: values.verbose ? (l: string) => console.log(`  ${l}`) : undefined,
       };
       const est = await estimate(spec, opts);
       console.log(`… ${est.plan.reason}`);
-      console.log(`… rendere ${est.frames} Bilder (Schätzung: ~${est.seconds < 90 ? `${est.seconds} s` : `${Math.round(est.seconds / 60)} min`})`);
+      if (opts.format !== "lottie") console.log(`… rendere ${est.frames} Bilder (Schätzung: ~${est.seconds < 90 ? `${est.seconds} s` : `${Math.round(est.seconds / 60)} min`})`);
       const r = await renderVideo(spec, opts);
-      console.log(`✓ ${r.output}  ${r.width}×${r.height}, ${r.duration}s, fertig in ${r.seconds}s mit ${r.plan.workers} Worker(n)`);
+      for (const w of r.warnings ?? []) console.log(`⚠ Lottie: ${LOTTIE_HINT[w.code]}${w.layers.length ? ` (${w.layers.join(", ")})` : ""}`);
+      console.log(`✓ ${r.output}  ${r.width}×${r.height}, ${Math.round(r.duration * 100) / 100}s, ${r.plan.workers ? `fertig in ${r.seconds}s mit ${r.plan.workers} Worker(n)` : `fertig in ${r.seconds}s`}`);
       return;
     }
     case "patch": {

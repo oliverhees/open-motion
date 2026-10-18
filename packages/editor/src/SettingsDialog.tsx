@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { api, type Integrations, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
+import { BrandsDialog } from "./BrandsDialog.tsx";
 import { useT, type Key } from "./i18n.ts";
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
 const KEYED = ["anthropic", "openai", "openrouter", "kie", "gemini", "elevenlabs", "groq", "deepgram"] as const;
-const LLMS: LlmProvider[] = ["claude-code", "codex", "anthropic", "openai", "openrouter"];
+const LLMS: LlmProvider[] = ["claude-code", "codex", "opencode", "anthropic", "openai", "openrouter"];
 const IMGS: ImageProvider[] = ["kie", "openai", "openrouter", "gemini"];
-const LLM_DEFAULTS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "" };
-const CLI_LLMS: LlmProvider[] = ["claude-code", "codex"];
+const LLM_DEFAULTS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "", opencode: "" };
+const CLI_LLMS: LlmProvider[] = ["claude-code", "codex", "opencode"];
 const IMG_DEFAULTS: Record<ImageProvider, string> = { kie: "gpt-image-2-text-to-image", openai: "gpt-image-1", openrouter: "google/gemini-2.5-flash-image", gemini: "gemini-2.5-flash-image" };
 const DEFAULT_MODELS: Record<Provider, string> = { local: "small", openai: "whisper-1", elevenlabs: "scribe_v1", groq: "whisper-large-v3-turbo", deepgram: "nova-3" };
 
@@ -26,6 +27,7 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
   const [fresh, setFresh] = useState<string | null>(null);
   useEffect(() => { api.tokens().then(setTokens).catch(() => setTokens(null)); }, []);
   const [integ, setInteg] = useState<Integrations | null>(null);
+  const [showBrands, setShowBrands] = useState(false);
   useEffect(() => { api.integrations().then(setInteg).catch(() => setInteg(null)); }, []);
   const makeToken = async () => {
     try {
@@ -67,14 +69,23 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
       <div className="modal wide" role="dialog" aria-modal="true" aria-labelledby="set-title" onClick={(e) => e.stopPropagation()}>
         <h2 id="set-title">{t_("settings")}</h2>
         <div className="sec">
+          <h3>{t_("brands")}</h3>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={() => setShowBrands(true)}>🎨 {t_("brandManage")}</button>
+            <span className="muted">{t_("brandsShort")}</span>
+          </div>
+        </div>
+        {showBrands && <BrandsDialog onClose={() => setShowBrands(false)} />}
+        <div className="sec">
           <h3>{t_("aiModel")}</h3>
           <div className="pair">
             <select value={s.ai.provider} onChange={(e) => setS({ ...s, ai: { ...s.ai, provider: e.target.value as LlmProvider, model: "" } })}>
               {LLMS.map((p) => <option key={p} value={p}>{t_(`p_${p}` as Key)}</option>)}
             </select>
-            <input value={s.ai.model ?? ""} placeholder={LLM_DEFAULTS[s.ai.provider]} onChange={(e) => setS({ ...s, ai: { ...s.ai, model: e.target.value } })} aria-label={t_("model")} />
+            <input value={s.ai.model ?? ""} placeholder={s.ai.provider === "opencode" ? "anthropic/claude-sonnet-4-5" : LLM_DEFAULTS[s.ai.provider]} onChange={(e) => setS({ ...s, ai: { ...s.ai, model: e.target.value } })} aria-label={t_("model")} />
           </div>
           {CLI_LLMS.includes(s.ai.provider) && <p className="muted" style={{ margin: "4px 0 0" }}>{t_("cliNote")}</p>}
+          {s.ai.provider === "opencode" && <p className="muted" style={{ margin: "4px 0 0" }}>{t_("opencodeNote")}</p>}
           <label className="check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
             <input type="checkbox" style={{ width: "auto", marginTop: 2 }} checked={s.ai.review !== false} onChange={(e) => setS({ ...s, ai: { ...s.ai, review: e.target.checked } })} />
             <span>{t_("reviewSetting")}</span>

@@ -7,10 +7,10 @@ Open Motion: motion graphics as code. Every element is a layer (frame + content 
 ## Map
 
 ```
-packages/core/src     types, schema (zod), ease, timing, cuts, transitions, evaluate, patch, compile, presets, describe, styles (14 styles + formats)
-packages/render/src   build (HyperFrames project), render (export), hardware (planning + learning), cli
-packages/server/src   server (routes), auth, queue, worker, store, settings, media, transcribe, diagnose, mcp (+ mcp-stdio bridge), frames (still frames for the AI review), fonts (Google Fonts, stored locally), integrations (Kie, local MCPs), ai/{agent,llm,cli,images,guide = master prompt}
-packages/editor/src   App, Editor, Stage, preview (hot update), Panel, MediaTab, ChatPanel, Interview (brief form + AI follow-ups), Dictate (voice), StylePicker, dialogs, i18n
+packages/core/src     types, schema (zod), ease, timing, cuts, transitions, evaluate, patch, compile, presets, describe, styles (14 styles + formats), brand (brand kit → ops), templates (25 templates + fitText), lottie (Lottie export), overlay (background layers for transparent export)
+packages/render/src   build (HyperFrames project), render (export incl. WebM/MOV alpha + Lottie), fontmetrics (ascent from WOFF2/TTF), hardware (planning + learning), cli
+packages/server/src   server (routes), auth, queue, worker, store, settings, media, transcribe, diagnose, mcp (+ mcp-stdio bridge), frames (still frames for the AI review), fonts (Google Fonts, stored locally), integrations (Kie, local MCPs), brands (brand kits on disk + applyBrand), ai/{agent,llm,cli (claude-code, codex, opencode),images,guide = master prompt}
+packages/editor/src   App, Editor, Stage, preview (hot update), Panel, MediaTab, ChatPanel, Interview (brief form + AI follow-ups), Dictate (voice), StylePicker, BrandsDialog, TemplatesTab (gallery + live preview), dialogs, i18n
 examples/explainer    example spec + assets
 install.sh, install.ps1, scripts/install/setup.ts   one-line installer (same setup.ts on every OS)
 docs/                 guide, spec reference, Coolify deploy; docs/de = German versions
@@ -26,6 +26,9 @@ OPENMOTION_FAKE_AI=1 npm start # test without keys
 node scripts/screenshots.ts docs/assets   # regenerate README screenshots (English UI)
 node scripts/frames.ts spec.json outDir [t …]   # quick still frames, no video encode
 node scripts/starter-fit.ts outDir               # starter layout fits in every style × format (real Chrome)
+node scripts/template-fit.ts outDir [styles] [ids]  # every template fits in every style × format (OM_FIT_LONG=1: overlong texts)
+node scripts/measure-fonts.ts workDir            # measure font widths of all styles (values for styles.ts)
+node scripts/lottie-frames.ts spec.json outDir   # Lottie export in lottie-web next to the browser preview
 node packages/render/src/cli.ts validate|describe|render|patch …
 ```
 

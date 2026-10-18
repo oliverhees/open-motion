@@ -322,7 +322,7 @@ export interface Camera {
 export interface MotionSpec {
   version: 1;
   /** style: id from the style library; brief: what the user wants (from the interview), kept for every later change. */
-  meta: { title: string; lang?: string; style?: string; brief?: string };
+  meta: { title: string; lang?: string; style?: string; brief?: string; brand?: import("./brand.ts").BrandMeta };
   canvas: { width: number; height: number; fps: number; background?: string; texture?: Texture };
   /** Global look. Palette entries become CSS variables: "$accent" → var(--om-accent). */
   style?: { palette?: Record<string, string>; fonts?: FontFace[] };

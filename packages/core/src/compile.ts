@@ -23,6 +23,10 @@ export interface CompileOptions {
   scale?: number;
   /** Layer id → pre-cut audio file (relative path). Used at export for click-free cuts. */
   audioOverrides?: Record<string, string>;
+  /** Transparent background (WebM/MOV with alpha): no canvas color, no texture. */
+  transparent?: boolean;
+  /** Layer ids left out of this compile (e.g. background areas for a transparent export). */
+  hide?: string[];
 }
 
 export interface CompileResult {
@@ -73,7 +77,7 @@ export function compile(spec: MotionSpec, options: CompileOptions = {}): Compile
 
   const ordered = spec.layers
     .map((layer, index) => ({ layer, index }))
-    .filter((e) => !e.layer.hidden)
+    .filter((e) => !e.layer.hidden && !options.hide?.includes(e.layer.id))
     .sort((a, b) => a.layer.track - b.layer.track || a.index - b.index);
 
   ordered.forEach(({ layer }, paintIndex) => {
@@ -189,7 +193,7 @@ export function compile(spec: MotionSpec, options: CompileOptions = {}): Compile
     camOpen = `<div id="om-cam" style="${esc(camStyle.join(";"))}">`;
   }
 
-  const texture = textureHtml(spec, width, height, duration, s, anims);
+  const texture = options.transparent ? "" : textureHtml(spec, width, height, duration, s, anims);
 
   const fontFaces = (spec.style?.fonts ?? [])
     .map((font) => {
@@ -201,7 +205,7 @@ export function compile(spec: MotionSpec, options: CompileOptions = {}): Compile
   const vars = Object.entries(palette)
     .map(([k, v]) => `--om-${k}:${v};`)
     .join("");
-  const background = color(spec.canvas.background ?? "#000000", palette);
+  const background = options.transparent ? "transparent" : color(spec.canvas.background ?? "#000000", palette);
   const data = JSON.stringify(anims).replace(/</g, "\\u003c");
 
   const html = `<!doctype html>
@@ -214,7 +218,7 @@ export function compile(spec: MotionSpec, options: CompileOptions = {}): Compile
 <style>
 ${fontFaces}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#000}
+html,body{margin:0;padding:0;background:${options.transparent ? "transparent" : "#000"}}
 #root{position:relative;width:${width}px;height:${height}px;overflow:hidden;background:${background};${vars}}
 .om-l{position:absolute}
 .om-fx{position:absolute;inset:0}
@@ -485,7 +489,9 @@ function countBody(layer: Extract<VisualLayer, { type: "text" }>, cid: string, c
     ? `counter-reset:omi var(${prop})`
     : `counter-reset:omi round(down, calc(var(${prop}) / ${f}), 1) omf mod(var(${prop}), ${f})`;
   const shown = dec === 0 || neg ? "counter(omi)" : `counter(omi) ${cssString(point)} counter(omf${dec === 2 ? ", decimal-leading-zero" : ""})`;
-  const contentCss = `${cssString(c.prefix ?? "")} ${shown} ${cssString(c.suffix ?? "")}`;
+  // Non-breaking spaces: "98 %" must never wrap between the number and its unit.
+  const nb = (v: string) => cssString(v.replace(/ /g, "\u00a0"));
+  const contentCss = `${nb(c.prefix ?? "")} ${shown} ${nb(c.suffix ?? "")}`;
   const { timing } = ctx;
   const delay = timing.start + (c.delay ?? 0) / timing.speed;
   const scaled = (v: number) => Math.round(v * (neg ? 1 : f));
@@ -667,7 +673,7 @@ function content(layer: VisualLayer, clipAttrs: string, ctx: ContentCtx, idSuffi
     case "svg": {
       const vb = layer.viewBox ?? `0 0 ${layer.frame.w} ${layer.frame.h}`;
       const par = layer.preserveAspectRatio ?? "xMidYMid meet";
-      let body = paletteInSvg(sanitizeSvg(layer.svg), palette);
+      let body = scopeSvgIds(paletteInSvg(sanitizeSvg(layer.svg), palette), `om-svg-${layer.id}-`);
       if (layer.draw) body = drawSvg(layer, body, ctx);
       return `<div id="${cid}" class="clip om-c" ${clipAttrs}${look.length ? ` style="${esc(look.join(";"))}"` : ""}><svg xmlns="http://www.w3.org/2000/svg" viewBox="${esc(vb)}" preserveAspectRatio="${esc(par)}" width="100%" height="100%" style="display:block;overflow:visible">${body}</svg></div>`;
     }
@@ -695,6 +701,24 @@ export function sanitizeSvg(markup: string): string {
     .replace(/<\s*foreignObject[\s\S]*?<\s*\/\s*foreignObject\s*>/gi, "")
     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/\s(?:xlink:)?href\s*=\s*("|')\s*javascript:[^"']*\1/gi, "");
+}
+
+/**
+ * Ids inside an SVG (patterns, gradients, clip paths) live in the page's id space. "dots" in a layer
+ * "dots" would clash with the layer box om-dots, and two layers with id="g" would steal each other's
+ * gradient. Every id and its references (url(#…), href="#…") get a per-layer prefix.
+ */
+export function scopeSvgIds(markup: string, prefix: string): string {
+  const ids = new Set([...markup.matchAll(/\sid\s*=\s*("|')([^"']+)\1/g)].map((m) => m[2]));
+  if (!ids.size) return markup;
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let out = markup.replace(/(\sid\s*=\s*)("|')([^"']+)\2/g, (m, a: string, q: string, id: string) => `${a}${q}${prefix}${id}${q}`);
+  for (const id of ids) {
+    out = out
+      .replace(new RegExp(`url\\(\\s*(['"]?)#${esc(id)}\\1\\s*\\)`, "g"), `url(#${prefix}${id})`)
+      .replace(new RegExp(`((?:xlink:)?href\\s*=\\s*)("|')#${esc(id)}\\2`, "g"), `$1$2#${prefix}${id}$2`);
+  }
+  return out;
 }
 
 /** "$accent" → "var(--om-accent)" for palette names, also inside gradients and shadows. */

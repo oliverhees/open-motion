@@ -7,7 +7,7 @@ import path from "node:path";
 import type { Settings } from "./settings.ts";
 import { httpFetch } from "./http.ts";
 
-export interface McpFinding { tool: "Claude Code" | "Codex" | "Hermes"; name: string }
+export interface McpFinding { tool: "Claude Code" | "Codex" | "Hermes" | "OpenCode"; name: string }
 
 /** MCP server names configured in the local AI tools (names only). */
 export function localMcps(home = os.homedir()): McpFinding[] {
@@ -27,6 +27,14 @@ export function localMcps(home = os.homedir()): McpFinding[] {
     const txt = readFileSync(hermes, "utf8");
     const block = /^mcp_servers:\s*\n((?:[ \t]+.*\n?)*)/m.exec(txt)?.[1] ?? "";
     for (const m of block.matchAll(/^ {2}([\w.-]+):/gm)) out.push({ tool: "Hermes", name: m[1] });
+  }
+  for (const file of ["opencode.json", "opencode.jsonc"].map((f) => path.join(process.env.XDG_CONFIG_HOME ?? path.join(home, ".config"), "opencode", f))) {
+    try {
+      // JSONC: drop comments and trailing commas before parsing (names only are read).
+      const txt = readFileSync(file, "utf8").replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
+      const j = JSON.parse(txt) as { mcp?: Record<string, unknown> };
+      Object.keys(j.mcp ?? {}).forEach((name) => out.push({ tool: "OpenCode", name }));
+    } catch { /* not there */ }
   }
   const seen = new Set<string>();
   return out.filter((x) => { const k = `${x.tool}/${x.name}`; if (seen.has(k)) return false; seen.add(k); return true; });

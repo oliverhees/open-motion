@@ -13,18 +13,18 @@ import os from "node:os";
 import path from "node:path";
 import {
   applyPatch, compositionDuration, describe, facecamLayers, findSuggestions, isWordCut, sceneTimings, sourceToComp,
-  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp,
-} from "@openmotion/core";
+  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp, LOTTIE_HINTS, type LottieWarningCode, TEMPLATES, templateDefaults } from "@openmotion/core";
 import { estimate } from "@openmotion/render";
 import type { ServerContext } from "./server.ts";
 import { HttpError } from "./store.ts";
 import { kindOf, probe, receiveUpload } from "./media.ts";
-import { sanitize, type ExportRequest } from "./jobs.ts";
+import { exportName, sanitize, withDefaults, type ExportRequest } from "./jobs.ts";
 import { PROVIDERS, type Provider } from "./settings.ts";
 import { motionGuide } from "./ai/guide.ts";
 import { renderFrames } from "./frames.ts";
 import { ensureFonts } from "./fonts.ts";
 import { imagesAvailable } from "./integrations.ts";
+import { applyBrand } from "./brands.ts";
 
 const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const VERSION = "0.1.0";
@@ -34,9 +34,9 @@ const INSTRUCTIONS = `Open Motion: motion graphics as code. A video is a Motion-
 Work like a top motion director:
 1. BRIEF: who watches, where it plays (format), length, the one takeaway, real assets/facts. Ask at most 4 short questions, each with a default; if the user skips, use the defaults.
 2. DIRECTION: read spec_reference and list_styles. Propose 3 directions (style id + one-line concept) and let the user pick, unless they already said what they want.
-3. SETUP: create_project with format and style (or set them), import_media + add_facecam for recordings, transcribe → job_status.
+3. SETUP: create_project with format and style (or set them) — list_brands first: if the user has a brand, it is applied automatically (logo, colors, fonts), use its logo in intro and outro. import_media + add_facecam for recordings, transcribe → job_status.
 4. BEAT SHEET: plan hook (0–1 s) → points (a new visual idea every 2–4 s) → payoff → end card, with times and a motion verb per element.
-5. BUILD with apply_patch (big batches are fine). For recordings: anchor graphics to words, captions, cut fillers.
+5. BUILD with apply_patch (big batches are fine). Use list_templates/add_template for standard beats (intro, lower third, big number, chart, list, CTA, outro, end screen): they are layout-tested in every format and follow style and brand; then customise their layers. For recordings: anchor graphics to words, captions, cut fillers.
 6. LOOK & FIX: call look (frames as images). Be a harsh motion director, not a proud author: score hook, readability at phone size, hierarchy, spacing/overlaps, safe area, pace, polish (1–10). Fix the 3 worst issues, look again, repeat until everything is ≥ 8.
 7. export_video → job_status → give the user the link.
 Images: if Open Motion has no image key (spec_reference says so) but you have an image MCP (e.g. Kie AI), generate the image there, save it, import_media it and use the asset path.`;
@@ -62,12 +62,35 @@ const TOOLS: Tool[] = [
   },
   {
     name: "create_project",
-    description: "Create a new project. format: 16:9 (default, YouTube), 9:16 (Shorts/Reels/TikTok), 1:1, 4:5 (feed). style: a style id from list_styles (sets palette, background and fonts). template \"example\" = explainer demo. lang \"de\"/\"en\" = language of on-screen texts.",
-    inputSchema: obj({ title: { type: "string" }, format: { type: "string", enum: [...FORMATS] }, style: { type: "string" }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
+    description: "Create a new project. format: 16:9 (default, YouTube), 9:16 (Shorts/Reels/TikTok), 1:1, 4:5 (feed). style: a style id from list_styles (sets palette, background and fonts). brand: a brand id from list_brands (logo, colors, fonts); omitted = the user's default brand, null = no brand. template \"example\" = explainer demo. lang \"de\"/\"en\" = language of on-screen texts.",
+    inputSchema: obj({ title: { type: "string" }, format: { type: "string", enum: [...FORMATS] }, style: { type: "string" }, brand: { type: ["string", "null"] }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
     run: async (a, c) => {
       if (a.style && !getStyle(String(a.style))) throw new Error(`Unknown style "${a.style}". Available: ${STYLES.map((s) => s.id).join(", ")}`);
       const info = await c.store.create(String(a.title ?? ""), a.template === "example" ? "example" : "blank", a.lang === "en" ? "en" : "de", { format: FORMATS.includes(a.format) ? a.format : undefined, style: a.style });
-      return { ...info, editor_url: editorUrl(c, info.id), next: "Read spec_reference, then build with apply_patch and check with look." };
+      const brandId = a.brand === null ? null : typeof a.brand === "string" ? a.brand : (await c.settings.read()).brand ?? null;
+      let brand: string | undefined;
+      if (brandId && a.template !== "example") brand = (await applyBrand(c.store, c.brands, info.id, brandId)).spec.meta.brand?.name;
+      return { ...info, ...(brand ? { brand } : {}), editor_url: editorUrl(c, info.id), next: "Read spec_reference, then build with apply_patch and check with look." };
+    },
+  },
+  {
+    name: "list_brands",
+    description: "The user's brand kits (logo, colors, fonts, tagline, website, handle) and which one is the default. A branded video must use the brand's logo, palette and fonts.",
+    inputSchema: obj({}),
+    run: async (_a, c) => {
+      const def = (await c.settings.read()).brand;
+      const list = await c.brands.list();
+      if (!list.length) return "No brands yet. The user can add one in the editor: ⚙ Settings → Brands.";
+      return list.map((b) => `${b.id}${b.id === def ? " (default)" : ""} — ${b.name}: accent ${b.colors.accent}${b.colors.accent2 ? `, accent2 ${b.colors.accent2}` : ""}${b.colors.bg ? `, bg ${b.colors.bg}` : ""}; fonts ${b.fonts.display?.family ?? "–"} / ${b.fonts.body?.family ?? "–"}; logo ${b.logo ? "yes" : "no"}${b.tagline ? `; tagline "${b.tagline}"` : ""}${b.website ? `; ${b.website}` : ""}${b.handle ? `; ${b.handle}` : ""}${b.watermark ? `; logo bug ${b.watermark.corner}` : ""}`).join("\n");
+    },
+  },
+  {
+    name: "apply_brand",
+    description: "Put a brand on a project (palette, fonts of all text, logo copied in, optional logo bug) or take it off with brand null (restores the look from before). Afterwards get_project/spec_reference show the brand and its logo path.",
+    inputSchema: obj({ project, brand: { type: ["string", "null"], description: "Brand id from list_brands, or null to remove" } }, ["project", "brand"]),
+    run: async (a, c) => {
+      const r = await applyBrand(c.store, c.brands, a.project, a.brand ?? null);
+      return { brand: r.spec.meta.brand?.name ?? null, logo: r.spec.meta.brand?.logo, ...(r.missingFonts.length ? { missing_fonts: r.missingFonts } : {}), hint: r.spec.meta.brand ? "Use the logo in intro and outro; colors only from the palette." : "Brand removed." };
     },
   },
   {
@@ -123,6 +146,25 @@ const TOOLS: Tool[] = [
       if (!Array.isArray(a.ops) || !a.ops.length) throw new Error('"ops" must be a non-empty array of patch operations.');
       return save(c, a.project, a.ops as PatchOp[]);
     },
+  },
+  {
+    name: "list_templates",
+    description: "Ready-made, layout-tested templates (scenes like intro, title, chapter, big number, bar chart, list, steps, compare, quote, CTA, outro, end screen, timeline; overlays like lower third, callout, subscribe, keyword, circle, arrow). They adapt to the project's format, style and brand. With project: the fields and their defaults for that project.",
+    inputSchema: obj({ project: { type: "string", description: "Optional: show defaults for this project" } }),
+    run: async (a, c) => {
+      const spec = a.project ? (await c.store.read(a.project)).spec : undefined;
+      return TEMPLATES.map((t) => {
+        const d = spec ? templateDefaults(spec, t.id) : {};
+        const fields = t.fields.map((f) => `${f.key}${f.type === "lines" ? " (one per line)" : ""}${spec ? `="${(d[f.key] ?? "").replace(/\n/g, "\\n")}"` : ""}`).join(", ");
+        return `${t.id} [${t.kind}, ${t.duration}s] ${t.name.en}: ${t.desc.en}${fields ? ` Fields: ${fields}` : ""}`;
+      }).join("\n");
+    },
+  },
+  {
+    name: "add_template",
+    description: "Insert a template at second `at`: scene templates become a new scene after the scene at `at` (or a full-screen card over a running recording), overlays appear at `at`. values = field texts (see list_templates; [[word]] highlights). Same as apply_patch with {\"op\":\"template\"}. Afterwards change any of its layers like normal layers.",
+    inputSchema: obj({ project, id: { type: "string" }, at: { type: "number" }, values: { type: "object", additionalProperties: { type: "string" } } }, ["project", "id"]),
+    run: async (a, c) => save(c, a.project, [{ op: "template", id: String(a.id), at: Number(a.at) || 0, values: a.values ?? {} } as PatchOp]),
   },
   {
     name: "import_media",
@@ -197,8 +239,10 @@ const TOOLS: Tool[] = [
         }
         return { ...base, words: res.words.length, language: res.language, hint: "Transcript saved. Next: get_transcript" };
       }
-      const file = (job.result as { file?: string })?.file;
-      return { ...base, file, url: file ? `${c.baseUrl}/projects/${job.projectId}/${file}?download` : undefined };
+      const r = job.result as { file?: string; warnings?: { code: LottieWarningCode; layers: string[] }[] } | undefined;
+      const file = r?.file;
+      const missing = r?.warnings?.map((w) => `${LOTTIE_HINTS[w.code] ?? w.code}${w.layers.length ? ` (${w.layers.join(", ")})` : ""}`);
+      return { ...base, file, url: file ? `${c.baseUrl}/projects/${job.projectId}/${file}?download` : undefined, ...(missing?.length ? { lottie_missing: missing } : {}) };
     },
   },
   {
@@ -222,15 +266,14 @@ const TOOLS: Tool[] = [
   },
   {
     name: "export_video",
-    description: "Render the video to MP4 (or GIF) in the background. height 720/1080/1440/2160 (default 1080), fps 24/25/30/50/60. Then job_status for the download link.",
-    inputSchema: obj({ project, height: { type: "number" }, fps: { type: "number" }, format: { type: "string", enum: ["mp4", "gif"] } }, ["project"]),
+    description: "Render in the background, then job_status for the download link. format: mp4 (default), gif, webm or mov (both with a TRANSPARENT background, for overlays in Premiere/DaVinci/CapCut; mov = ProRes 4444, large), lottie (Lottie JSON, beta: video, captions, glow, blur and 3D are left out, job_status lists what). height 720/1080/1440/2160 (default 1080), fps 24/25/30/50/60. Transparent exports hide full-canvas background shapes by default; pass hide (layer ids) to choose yourself, transparent:false to keep the background.",
+    inputSchema: obj({ project, height: { type: "number" }, fps: { type: "number" }, format: { type: "string", enum: ["mp4", "gif", "webm", "mov", "lottie"] }, transparent: { type: "boolean" }, hide: { type: "array", items: { type: "string" } } }, ["project"]),
     run: async (a, c) => {
-      const request = sanitize({ height: a.height, fps: a.fps, format: a.format } as Partial<ExportRequest>);
       const { spec } = await c.store.read(a.project);
+      const request = withDefaults(sanitize({ height: a.height, fps: a.fps, format: a.format, transparent: a.transparent, hide: a.hide } as Partial<ExportRequest>), spec);
       const statsFile = path.resolve(c.dataDir, "render-stats.json");
       const est = await estimate(spec, { ...request, statsFile });
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-      const name = `${a.project}-${request.height}p-${stamp}.${request.format}`;
+      const name = exportName(a.project, request);
       const job = await c.queue.enqueue("export", { projectId: a.project, spec, request, name }, { projectId: a.project, request, estimateSeconds: est.seconds, plan: est.plan });
       return { job: job.id, estimate_seconds: est.seconds, hint: "Call job_status with wait_seconds until status is done." };
     },

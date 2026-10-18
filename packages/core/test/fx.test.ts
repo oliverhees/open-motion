@@ -53,7 +53,7 @@ test("kinetic text: order center/random is deterministic, chars split, plain tex
 test("counter: registered integer property, decimals via CSS counters, German decimal comma", () => {
   const c = compile(base([text({ text: "", count: { from: 0, to: 98.5, decimals: 1, suffix: " %", duration: 2 } })]));
   assert.match(c.html, /@property --om-n-t\{syntax:"<integer>"/);
-  assert.match(c.html, /counter\(omi\) "," counter\(omf\) " %"/);
+  assert.match(c.html, /counter\(omi\) "," counter\(omf\) "\u00a0%"/, "unit glued with a non-breaking space");
   const a = c.anims.find((x) => x[0] === "om-n-t")!;
   assert.deepEqual([a[1][0]["--om-n-t"], a[1][1]["--om-n-t"], a[2], a[3]], [0, 985, 1000, 2000]);
 });

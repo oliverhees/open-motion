@@ -3,7 +3,7 @@
 // Built from HeyGen's open HyperFrames motion rules, the Remotion skills and what works in the
 // best shared Claude motion prompts (see docs/mcp.md for sources).
 
-import { getStyle, STYLES, styleBrief, type MotionSpec } from "@openmotion/core";
+import { getStyle, STYLES, styleBrief, TEMPLATES, type MotionSpec, WATERMARK_ID } from "@openmotion/core";
 
 /** Safe areas per format (px from the edge) where key text must stay inside. */
 export function formatNotes(spec: MotionSpec): string {
@@ -15,12 +15,28 @@ export function formatNotes(spec: MotionSpec): string {
   return `FORMAT 16:9 (${W}×${H}). Safe: 120 px sides, 100 px top/bottom. Headline ≥ 84 px (hero 120–200 px), body ≥ 40 px.`;
 }
 
+/** The project's brand: the AI must use its logo, colors and fonts and never invent another look. */
+export function brandNotes(spec: MotionSpec): string {
+  const b = spec.meta.brand;
+  if (!b) return "";
+  const lines = [
+    `\nBRAND "${b.name}" — this video is branded, it must look like this brand:`,
+    `- Colors are already in the palette ($bg, $ink, $accent${spec.style?.palette?.accent2 ? ", $accent2" : ""} …). Use ONLY palette tokens, no other colors. The art direction's motion rules still apply; its colors and fonts are replaced by the brand's.`,
+    b.display || b.body ? `- Fonts: headlines "${b.display ?? b.body}", body text "${b.body ?? b.display}". Use only these.` : "",
+    b.logo ? `- Logo: image layer src "${b.logo}", fit "contain", width = height × ${b.logoAspect ?? 1}. Put it in the intro and the outro (not tiny: ≥ 8 % of the short side), never stretch or recolor it.${spec.layers.some((l) => l.id === WATERMARK_ID) ? ` A small logo bug ("${WATERMARK_ID}") already runs through the whole video — keep that corner free.` : ""}` : "",
+    b.tagline ? `- Tagline (use word for word where a claim fits): "${b.tagline}"` : "",
+    b.website ? `- Website (outro / call to action): ${b.website}` : "",
+    b.handle ? `- Handle (follow / subscribe call): ${b.handle}` : "",
+  ];
+  return lines.filter(Boolean).join("\n") + "\n";
+}
+
 export function motionGuide(spec: MotionSpec, opts: { images?: boolean; viaMcp?: boolean } = {}): string {
   const st = getStyle(spec.meta.style);
   const pal = Object.keys(spec.style?.palette ?? {}).map((k) => `$${k}`).join(", ") || "(none yet: set one with the style op)";
   return `${formatNotes(spec)}
 Palette in this project: ${pal}.
-${st ? `\nCHOSEN ART DIRECTION — follow it strictly:\n${styleBrief(st)}\n` : `\nNo style chosen yet. Pick the best fitting one from the library below and set it: {"op":"meta","set":{"style":"<id>"}} plus its palette via {"op":"style","set":{"palette":{…}}}.\n`}${spec.meta.brief ? `\nBRIEF FROM THE USER (keep honoring it):\n${spec.meta.brief}\n` : ""}
+${st ? `\nCHOSEN ART DIRECTION — follow it strictly:\n${styleBrief(st)}\n` : `\nNo style chosen yet. Pick the best fitting one from the library below and set it: {"op":"meta","set":{"style":"<id>"}} plus its palette via {"op":"style","set":{"palette":{…}}}.\n`}${spec.meta.brief ? `\nBRIEF FROM THE USER (keep honoring it):\n${spec.meta.brief}\n` : ""}${brandNotes(spec)}
 STYLE LIBRARY (id: mood): ${STYLES.map((s) => `${s.id}: ${s.mood.en}`).join(" | ")}
 
 ═══ DESIGN LAWS (this is what separates premium from template) ═══
@@ -75,6 +91,8 @@ OPERATIONS
 {"op":"style","set":{"palette":{…}}} · {"op":"canvas","set":{"background":"$bg"}} · {"op":"meta","set":{"style":"<id>","brief":"…"}} · {"op":"camera","set":{…}|null}
 {"op":"cut","t0":1.2,"t1":1.6,"reason":"filler"} · {"op":"uncut",…} · {"op":"word","id":"w12","text":"fixed"} (transcript times = seconds in the ORIGINAL recording)
 Layers in a scene: "scene":"<id>" and "start" relative to the scene. Layers about something said: "anchor" on the word (offset ≈ -0.2).
+TEMPLATES (layout-tested in every format, follow style + brand; then change their layers like any other): {"op":"template","id":"<id>","at":<seconds>,"values":{"<field>":"…"}}. Scene templates add a scene after the one at "at" (with a running recording: a full-screen card over it); overlays appear at "at". Use them for standard beats instead of building from scratch:
+${TEMPLATES.map((t) => `${t.id} (${t.kind}, ${t.duration}s${t.fields.length ? `: ${t.fields.map((f) => f.key).join(", ")}` : ""})`).join(" · ")}
 
 ═══ RECIPES (named moves → JSON) ═══
 mask-headline: text + "anim":{"type":"mask","by":"word","stagger":0.07,"duration":0.7,"ease":"expo.out"}

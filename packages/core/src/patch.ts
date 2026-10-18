@@ -9,6 +9,7 @@ import { SpecError, validateSpec } from "./schema.ts";
 import { layerTiming, toRel } from "./timing.ts";
 import { baseValue, propAt } from "./evaluate.ts";
 import { normalizeCuts, subtractCut } from "./cuts.ts";
+import { templateOps } from "./templates.ts";
 import { ANIM_PROPS, isVisual, type AnimProp, type Ease, type Layer, type MotionSpec, type Scene, type VisualLayer } from "./types.ts";
 
 export type PatchOp =
@@ -32,7 +33,7 @@ export type PatchOp =
   | { op: "removeScene"; id: string; removeLayers?: boolean }
   | { op: "style"; set: NonNullable<MotionSpec["style"]> }
   | { op: "canvas"; set: Partial<MotionSpec["canvas"]> }
-  | { op: "meta"; set: Partial<MotionSpec["meta"]> }
+  | { op: "meta"; set: { [K in keyof MotionSpec["meta"]]?: MotionSpec["meta"][K] | null } }
   /** Set the camera (push-ins, pans, zoom to a target; absolute seconds). null removes it. */
   | { op: "camera"; set: MotionSpec["camera"] | null }
   /** Replace the transcript (null removes it). Anchors on vanished words move to the nearest new word. */
@@ -43,7 +44,9 @@ export type PatchOp =
   | { op: "cut"; t0: number; t1: number; reason?: "manual" | "filler" | "pause" }
   /** Restore a range (removes it from the cuts). */
   | { op: "uncut"; t0: number; t1: number }
-  | { op: "cuts"; set: { t0: number; t1: number; reason?: "manual" | "filler" | "pause" }[] };
+  | { op: "cuts"; set: { t0: number; t1: number; reason?: "manual" | "filler" | "pause" }[] }
+  /** Insert a ready-made template (see TEMPLATES) at composition time `at`: a scene or an overlay, in the project's look. */
+  | { op: "template"; id: string; at?: number; values?: Record<string, string> };
 
 export interface PatchResult {
   spec: MotionSpec;
@@ -80,6 +83,16 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
     return idx;
   };
 
+  if (op.op === "template") {
+    let r: ReturnType<typeof templateOps>;
+    try {
+      r = templateOps(spec, op.id, op.values ?? {}, op.at ?? 0);
+    } catch (e) {
+      throw new PatchError(i, (e as Error).message);
+    }
+    for (const sub of r.ops) applyOne(spec, sub, i, changed);
+    return;
+  }
   switch (op.op) {
     case "set": {
       const idx = find(op.id);
@@ -157,7 +170,20 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
     case "scene": {
       const scene = spec.scenes.find((s) => s.id === op.id);
       if (!scene) throw new PatchError(i, `no scene with id "${op.id}"`);
+      const before = scene.duration;
       Object.assign(scene, op.set);
+      // A shorter scene trims its layers, so nothing spills into the next scene (anchored layers keep their word timing).
+      if (typeof op.set.duration === "number" && op.set.duration < before) {
+        for (const l of spec.layers) {
+          if (l.scene !== op.id || l.anchor || l.start + l.duration <= op.set.duration + 1e-6) continue;
+          l.duration = Math.max(0.1, Math.round((op.set.duration - l.start) * 1000) / 1000);
+          // Keyframes after the new end would never play.
+          if (isVisual(l) && l.keys) for (const k of Object.keys(l.keys) as AnimProp[]) {
+            const list = l.keys[k]!.filter((kf) => kf.t <= l.duration + 1e-6);
+            if (list.length) l.keys[k] = list; else delete l.keys[k];
+          }
+        }
+      }
       spec.layers.filter((l) => l.scene === op.id).forEach((l) => changed.add(l.id));
       return;
     }
@@ -235,7 +261,9 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
       return;
     }
     case "meta": {
-      spec.meta = { ...spec.meta, ...op.set };
+      // null removes a field (JSON has no undefined), e.g. {"brand": null} takes the brand off.
+      spec.meta = { ...spec.meta, ...op.set } as MotionSpec["meta"];
+      for (const [k, v] of Object.entries(op.set)) if (v === null || v === undefined) delete (spec.meta as Record<string, unknown>)[k];
       return;
     }
     default:

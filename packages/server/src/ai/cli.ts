@@ -1,6 +1,7 @@
 // Language models through a local CLI with your own subscription (no API key):
 //   claude-code  →  claude -p   (Claude Pro/Max login of the Claude Code CLI)
 //   codex        →  codex exec  (ChatGPT login of the Codex CLI)
+//   opencode     →  opencode run (whatever provider you logged in with: `opencode auth login`)
 // Only works where the CLI is installed and logged in, so: on your own computer, not in Docker.
 // The prompt goes in through stdin, the answer comes back as text. Tools of the CLI are switched off
 // or read-only: the CLI only writes the JSON answer, the core checks it like any other answer.
@@ -10,13 +11,14 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-export const CLI_PROVIDERS = ["claude-code", "codex"] as const;
+export const CLI_PROVIDERS = ["claude-code", "codex", "opencode"] as const;
 export type CliProvider = (typeof CLI_PROVIDERS)[number];
 
-export const CLI_LABEL: Record<CliProvider, string> = { "claude-code": "Claude Code (Abo)", codex: "Codex (Abo)" };
+export const CLI_LABEL: Record<CliProvider, string> = { "claude-code": "Claude Code (Abo)", codex: "Codex (Abo)", opencode: "OpenCode" };
 const BIN: Record<CliProvider, { env: string; name: string; install: string; login: string }> = {
   "claude-code": { env: "OPENMOTION_CLAUDE_BIN", name: "claude", install: "npm install -g @anthropic-ai/claude-code", login: "Einmal `claude` im Terminal starten und mit /login anmelden." },
   codex: { env: "OPENMOTION_CODEX_BIN", name: "codex", install: "npm install -g @openai/codex", login: "Einmal `codex login` im Terminal ausführen." },
+  opencode: { env: "OPENMOTION_OPENCODE_BIN", name: "opencode", install: "npm install -g opencode-ai (oder: curl -fsSL https://opencode.ai/install | bash)", login: "Einmal `opencode auth login` im Terminal ausführen und einen Anbieter wählen." },
 };
 const TIMEOUT_MS = 10 * 60_000;
 
@@ -59,6 +61,37 @@ export async function completeCli(provider: CliProvider, model: string | undefin
         : prompt;
       const out = await runCli(provider, args, input, work, env, TIMEOUT_MS, onLine);
       return parseClaude(out);
+    }
+    if (provider === "opencode") {
+      // The prompt goes in as an attached file (no length limit on the command line), images as files too.
+      // Every tool is denied: OpenCode only writes the JSON answer, in an empty folder.
+      const promptFile = path.join(work, "openmotion-task.md");
+      await writeFile(promptFile, `${system}\n\n${prompt}`);
+      const args = ["run", "--format", "json", "--dir", work, "--file", promptFile];
+      for (const [i, png] of messages.flatMap((m) => m.images ?? []).entries()) {
+        const file = path.join(work, `frame-${i}.png`);
+        await writeFile(file, png);
+        args.push("--file", file);
+      }
+      if (model) args.push("--model", model);
+      args.push("Follow the instructions in the attached file openmotion-task.md exactly. Answer only with what it asks for (the JSON), no tools.");
+      const env = { ...process.env, OPENCODE_PERMISSION: JSON.stringify({ edit: "deny", bash: "deny", webfetch: "deny", read: "deny", write: "deny", glob: "deny", grep: "deny", list: "deny", task: "deny", todowrite: "deny", todoread: "deny" }) };
+      let text = "";
+      let error = "";
+      const onLine = (line: string) => {
+        if (!line.startsWith("{")) return;
+        try {
+          const ev = JSON.parse(line) as { type?: string; part?: { text?: string }; error?: { name?: string; data?: { message?: string } }; message?: string };
+          if (ev.type === "text" && ev.part?.text) { text += ev.part.text; onProgress?.(liveSummary(text)); }
+          else if (ev.type === "step_start" && !text) onProgress?.({ phase: "thinking" });
+          else if (ev.type === "error") error = ev.message || ev.error?.data?.message || ev.error?.name || "unknown error";
+        } catch { /* other output */ }
+      };
+      onProgress?.({ phase: "thinking" });
+      await runCli(provider, args, "", work, env, TIMEOUT_MS, onLine);
+      if (error) throw new Error(`OpenCode meldet einen Fehler: ${error.slice(0, 400)}${loginHint("opencode", error)}`);
+      if (!text.trim()) throw new Error(`OpenCode hat keine Antwort geschrieben. Ist ein Modell eingerichtet? ${BIN.opencode.login}`);
+      return text.trim();
     }
     const last = path.join(work, "answer.txt");
     const args = ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", last];

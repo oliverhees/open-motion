@@ -115,3 +115,63 @@ test("liveSummary: shows the half-written answer and counts the changes built so
   assert.deepEqual(liveSummary('{"message": "Fertig.", "ops": [{"op":"add","layer":{}},{"op": "set"'), { phase: "writing", text: "Fertig.", ops: 2 });
   assert.deepEqual(liveSummary(""), { phase: "writing", text: "", ops: undefined });
 });
+
+/** Fake OpenCode: JSON events on stdout like `opencode run --format json`, logs args, env and attached files. */
+async function fakeOpenCode(opts: { error?: string; empty?: boolean } = {}) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "om-oc-test-"));
+  const log = path.join(dir, "log.json");
+  const bin = path.join(dir, "opencode");
+  const reply = JSON.stringify(answer);
+  await writeFile(bin, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+if (args[0] === "--version") { console.log("0.9.9"); process.exit(0); }
+const files = []; for (let i = 0; i < args.length; i++) if (args[i] === "--file") files.push({ name: require("node:path").basename(args[i + 1]), size: fs.statSync(args[i + 1]).size, head: fs.readFileSync(args[i + 1]).subarray(0, 200).toString("latin1") });
+fs.writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args, files, permission: process.env.OPENCODE_PERMISSION ?? null }));
+const ev = (o) => console.log(JSON.stringify({ timestamp: Date.now(), sessionID: "ses_x", ...o }));
+ev({ type: "step_start", part: { type: "step-start" } });
+${opts.error ? `ev({ type: "error", error: { name: "ProviderAuthError", data: { message: ${JSON.stringify(opts.error)} } } });` : opts.empty ? "" : `const r = ${JSON.stringify(reply)}; ev({ type: "text", part: { type: "text", text: r.slice(0, 20) } }); ev({ type: "text", part: { type: "text", text: r.slice(20) } });`}
+ev({ type: "step_finish", part: { type: "step-finish", reason: "stop" } });
+`);
+  await chmod(bin, 0o755);
+  return { bin, read: async () => JSON.parse(await readFile(log, "utf8")) as { args: string[]; files: { name: string; size: number; head: string }[]; permission: string | null } };
+}
+
+test("opencode: prompt as attached file, every tool denied, answer from text events, images as files, model flag", async () => {
+  const cli = await fakeOpenCode();
+  process.env.OPENMOTION_OPENCODE_BIN = cli.bin;
+  try {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "om-ai-"));
+    const r = await runAgent({ kind: "comment", spec: example, comment: { t: 2, layer: "s1-icon", text: "dreh das Schloss" } }, { settings: settings("opencode", "anthropic/claude-sonnet-4-5"), projectDir: dir });
+    assert.deepEqual(r.changed, ["s1-icon"]);
+    const log = await cli.read();
+    assert.equal(log.args[0], "run");
+    assert.deepEqual(log.args.slice(1, 3), ["--format", "json"]);
+    assert.equal(log.args[log.args.indexOf("--model") + 1], "anthropic/claude-sonnet-4-5");
+    assert.equal(log.files[0].name, "openmotion-task.md");
+    assert.match(log.files[0].head, /motion director of Open Motion/);
+    const perm = JSON.parse(log.permission ?? "{}");
+    assert.equal(perm.bash, "deny");
+    assert.equal(perm.edit, "deny");
+    const text = await completeCli("opencode", undefined, "SYS", [{ role: "user", content: "Look", images: [Buffer.from([0x89, 0x50, 0x4e, 0x47])] }]);
+    assert.equal(text, JSON.stringify(answer));
+    const log2 = await cli.read();
+    assert.ok(log2.files.some((f) => f.name === "frame-0.png"), "frames attached as files");
+    assert.ok(!log2.args.includes("--model"), "no model flag when empty");
+  } finally {
+    delete process.env.OPENMOTION_OPENCODE_BIN;
+  }
+});
+
+test("opencode: errors and empty answers explain how to fix them", async () => {
+  const bad = await fakeOpenCode({ error: "No API key found, please run opencode auth login" });
+  process.env.OPENMOTION_OPENCODE_BIN = bad.bin;
+  try {
+    await assert.rejects(completeCli("opencode", undefined, "s", [{ role: "user", content: "x" }]), /OpenCode meldet einen Fehler: No API key found.*→ Einmal `opencode auth login`/);
+    const empty = await fakeOpenCode({ empty: true });
+    process.env.OPENMOTION_OPENCODE_BIN = empty.bin;
+    await assert.rejects(completeCli("opencode", undefined, "s", [{ role: "user", content: "x" }]), /keine Antwort geschrieben/);
+  } finally {
+    delete process.env.OPENMOTION_OPENCODE_BIN;
+  }
+});

@@ -1,4 +1,4 @@
-import type { MotionSpec } from "@openmotion/core";
+import type { Brand, MotionSpec } from "@openmotion/core";
 
 export interface ProjectInfo { id: string; title: string; createdAt: string; updatedAt: string; duration?: number }
 export interface Comment { id: string; t: number; layer?: string; x?: number; y?: number; text: string; toAI: boolean; status: "open" | "queued" | "done"; createdAt: string; reply?: string }
@@ -16,17 +16,18 @@ export interface AgentResult {
 export interface Asset { path: string; kind: "images" | "video" | "audio" | "fonts"; size: number; duration?: number; width?: number; height?: number; hasAudio?: boolean }
 export interface UploadResult extends Asset { converted: boolean; hasVideo: boolean }
 export type Provider = "local" | "openai" | "elevenlabs" | "groq" | "deepgram";
-export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex";
+export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex" | "opencode";
 export type ImageProvider = "kie" | "openai" | "openrouter" | "gemini";
-export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string; review?: boolean }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }> }
+export type BrandInput = Partial<Omit<Brand, "id" | "logo" | "logoAspect">>;
+export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string; review?: boolean }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }>; brand?: string }
 export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number; progress?: AiProgress }
 /** Live state of the AI while it works (from the server, translated in the chat). */
 export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image" | "review"; text?: string; ops?: number; n?: number; of?: number }
 export interface TranscriptResult { source: string; language?: string; provider: string; words: { id: string; text: string; t0: number; t1: number }[] }
-export interface ExportRequest { format: "mp4" | "gif"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean }
+export interface ExportRequest { format: "mp4" | "gif" | "webm" | "mov" | "lottie"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean; transparent?: boolean; hide?: string[] }
 export interface RenderPlan { workers: number; gpu: boolean; reason: string; info?: { cores: number; container: boolean; memGB: number; load: number; limit: "cpu" | "ram" | "cap" | "forced"; gpuName?: string } }
 export interface Estimate { frames: number; seconds: number; calibrated: boolean; plan: RenderPlan }
-export interface Job { id: string; status: "queued" | "running" | "done" | "error"; estimateSeconds: number; plan?: RenderPlan; workerOnline?: boolean; startedAt?: number; finishedAt?: number; file?: string; size?: number; error?: string }
+export interface Job { id: string; status: "queued" | "running" | "done" | "error"; estimateSeconds: number; plan?: RenderPlan; workerOnline?: boolean; startedAt?: number; finishedAt?: number; file?: string; size?: number; error?: string; warnings?: { code: string; layers: string[] }[] }
 
 /** Every request carries x-om: 1 (CSRF protection). A 401 sends the app back to the login screen. */
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
@@ -39,7 +40,17 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   list: () => req<ProjectInfo[]>("/api/projects"),
-  create: (title: string, template: "blank" | "example", lang?: string, format?: string, style?: string) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang, format, style }) }),
+  create: (title: string, template: "blank" | "example", lang?: string, format?: string, style?: string, brand?: string | null) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang, format, style, brand }) }),
+  brands: () => req<{ brands: Brand[]; default: string | null }>("/api/brands"),
+  createBrand: (b: BrandInput) => req<Brand>("/api/brands", { method: "POST", body: JSON.stringify(b) }),
+  updateBrand: (id: string, b: BrandInput) => req<Brand>(`/api/brands/${id}`, { method: "PUT", body: JSON.stringify(b) }),
+  deleteBrand: (id: string) => req<{ ok: true }>(`/api/brands/${id}`, { method: "DELETE" }),
+  brandLogo: (id: string, file: File) => req<Brand>(`/api/brands/${id}/logo`, { method: "POST", body: file, headers: { "content-type": file.type || "application/octet-stream" } }),
+  brandFont: (id: string, slot: "display" | "body", file: File, family: string) =>
+    req<Brand>(`/api/brands/${id}/font?slot=${slot}&name=${encodeURIComponent(file.name)}&family=${encodeURIComponent(family)}`, { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } }),
+  brandLogoUrl: (b: Brand) => `/api/brands/${b.id}/logo?v=${encodeURIComponent(b.logo ?? "")}`,
+  brandFontUrl: (b: Brand, slot: "display" | "body") => `/api/brands/${b.id}/font/${slot}?v=${encodeURIComponent(b.fonts[slot]?.file ?? "")}`,
+  applyBrand: (id: string, brand: string | null) => req<{ spec: MotionSpec; missingFonts: string[] }>(`/api/projects/${id}/brand`, { method: "POST", body: JSON.stringify({ brand }) }),
   /** Voice → text (local Whisper or the configured service). */
   dictate: (audio: Blob, lang: string) => req<Task<{ text: string }>>(`/api/dictate?lang=${encodeURIComponent(lang)}`, { method: "POST", body: audio, headers: { "content-type": audio.type || "audio/webm" } }),
   integrations: () => req<Integrations>("/api/integrations"),

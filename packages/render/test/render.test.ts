@@ -61,3 +61,30 @@ test("cut audio: kept pieces joined with micro fades", async () => {
   const d = Number(spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]).stdout.toString());
   assert.ok(Math.abs(d - 11) < 0.1, `duration ${d}`);
 });
+
+test("font metrics come from the font file (woff2), used to place Lottie text like the browser", async () => {
+  const { fontMetrics } = await import("@openmotion/render");
+  const m = fontMetrics(readFileSync(path.join(exampleDir, "assets/fonts/bricolage-grotesque-latin.woff2")));
+  assert.ok(m, "metrics read");
+  assert.ok(m!.ascent > 0.7 && m!.ascent < 1.3, `ascent ${m!.ascent}`);
+  assert.ok(m!.descent > 0.1 && m!.descent < 0.5, `descent ${m!.descent}`);
+  assert.equal(fontMetrics(Buffer.from("not a font")), null);
+});
+
+test("lottie export: one JSON with embedded images and warnings, no render needed", async () => {
+  const out = path.join(await mkdtemp(path.join(os.tmpdir(), "om-test-")), "x.json");
+  const r = await renderVideo(example, { specDir: exampleDir, output: out, format: "lottie", hide: ["bg"] });
+  const json = JSON.parse(readFileSync(out, "utf8"));
+  assert.equal(json.w, example.canvas.width);
+  assert.ok(json.assets.some((a: { p: string }) => a.p.startsWith("data:image/png;base64,")), "image embedded");
+  assert.ok(r.warnings?.some((w) => w.code === "video"), "facecam video reported as missing");
+});
+
+test("renders a transparent WebM", { skip: process.env.OM_RENDER_TEST !== "1" }, async () => {
+  const out = path.join(await mkdtemp(path.join(os.tmpdir(), "om-test-")), "x.webm");
+  const spec: MotionSpec = { version: 1, meta: { title: "a" }, canvas: { width: 320, height: 180, fps: 10, background: "#000" }, scenes: [{ id: "s", name: "s", duration: 1 }],
+    layers: [{ id: "b", type: "shape", shape: "rect", track: 1, start: 0, duration: 1, frame: { x: 100, y: 50, w: 100, h: 80 }, fill: "#ff0000" }] };
+  await renderVideo(spec, { specDir: exampleDir, output: out, format: "webm", transparent: true });
+  const probe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream_tags=alpha_mode", "-of", "csv=p=0", out], { encoding: "utf8" });
+  assert.match(probe.stdout, /1/, "VP9 with alpha");
+});

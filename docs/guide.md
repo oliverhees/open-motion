@@ -37,6 +37,22 @@
 
 **Effects you can ask for or set in the panel:** text by word/letter/line, highlighter on a word, counting numbers, lines that draw themselves, mask and iris reveals, 3D tilt, blur, camera moves, glow/shadow/glass, grain/vignette/scanlines, subtitles from the transcript (Media tab).
 
+## 🏷️ Brand kit
+
+1. **🎨 Brands** (start page, ⚙ Settings or the "Style" tab) → **New brand**.
+2. Logo (PNG, JPEG, WebP, SVG), colors (only the main color is required, the rest is derived so text stays readable), fonts (a Google Fonts name or your own WOFF2/TTF file), tagline, website, handle.
+3. Optional: **logo in the video** in a corner (size, opacity). It always runs through the whole video.
+4. **Default for new videos** on → every new video starts in your brand. Per project: tab **Style** → **Brand** (switch, re-apply, or "No brand", which restores the look exactly).
+
+## 🧩 Templates (tab "Templates")
+
+25 ready-made scenes and overlays: intro, title card, chapter, hook, statement, big number, 3 stats, bar chart, list, steps, compare, quote, call to action, outro, YouTube end screen, countdown, checklist, timeline · lower third, callout with line, subscribe button, keyword, handle, circle it, arrow.
+
+1. Click a template → a **live preview in your format, style and brand** appears.
+2. Change the texts (`[[word]]` highlights) → **Insert**. Scenes are added after the current scene; overlays appear at the playhead.
+3. With a recording running through the video, scene templates become a full-screen card at the playhead; the voice keeps running.
+4. Everything inserted is ordinary layers: click, drag, change, or ask the AI.
+
 ## ✦ AI
 
 - **Chat** on the left: describe a video or ask for changes. Changed layers flash; every answer has its own Undo.
@@ -56,6 +72,10 @@
 
 ## 📦 Export & rendering
 
+- **MP4 / GIF:** the finished video.
+- **WebM / MOV · transparent:** for overlays in Premiere, DaVinci, CapCut or on websites. Full-screen background areas are hidden automatically (switchable in the dialog). MOV is ProRes 4444: large, made for editing apps.
+- **Lottie (beta):** a JSON for apps, websites and After Effects. Shapes, text, images, gradients, counters, wipes and all transitions; video, subtitles, glow, blur and 3D are left out, and the dialog lists what is missing. Fonts must be installed where the Lottie plays.
+
 - MP4 or GIF, 720p/1080p, 15/30/60 fps, quality, optional sharper text (renders at 2×).
 - The worker detects CPU cores, free RAM and GPU (container-aware), plans the number of Chrome workers per export and learns real render speed in `data/render-stats.json`.
 - Manual override: `OPENMOTION_RENDER_WORKERS=4`, `OPENMOTION_RENDER_GPU=0|1`.
@@ -66,7 +86,10 @@
 openmotion validate spec.json
 openmotion describe spec.json                 # compact map for AI models
 openmotion compile  spec.json -o build/
-openmotion render   spec.json -o video.mp4 [--height 720] [--fps 30] [--quality high|medium|low] [--format mp4|gif] [--sharp]
+openmotion render   spec.json -o video.mp4 [--height 720] [--fps 30] [--quality high|medium|low] [--format mp4|gif|webm|mov|lottie] [--sharp]
+openmotion render   spec.json -o overlay.webm --format webm          # transparent, full-canvas background shapes hidden
+openmotion render   spec.json -o overlay.mov --format mov --hide bg  # choose the hidden layers yourself (--keep-bg keeps all)
+openmotion render   spec.json -o anim.json --format lottie           # Lottie (beta), prints what was left out
 openmotion patch    spec.json ops.json
 ```
 

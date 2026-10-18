@@ -1,11 +1,12 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { applyPatch, captionsLayer, compositionDuration, facecamLayers, getStyle, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { applyPatch, captionsLayer, compositionDuration, facecamLayers, getStyle, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp, type Brand, syncWatermark } from "@openmotion/core";
 import { api, fmtTime, type AgentResult, type AiProgress, type Asset, type ChatEntry, type Comment, type ProjectInfo, type Provider, type PublicSettings, type TranscriptResult } from "./api.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { Interview, type Brief } from "./Interview.tsx";
 import type { SttState, Upload } from "./MediaTab.tsx";
 import { RecordDialog } from "./RecordDialog.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
+import { BrandsDialog } from "./BrandsDialog.tsx";
 import { LangContext, useT } from "./i18n.ts";
 import { LangSwitch, LogoutButton } from "./App.tsx";
 import { Stage, type Draft } from "./Stage.tsx";
@@ -32,6 +33,11 @@ export function Editor({ id }: { id: string }) {
   const [save, setSave] = useState<"saved" | "saving" | "error">("saved");
   const [toast, setToast] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [showBrands, setShowBrands] = useState(false);
+  const [brandBusy, setBrandBusy] = useState(false);
+  const loadBrands = () => api.brands().then((r) => setBrands(r.brands)).catch(() => {});
+  useEffect(() => { void loadBrands(); }, []);
   const [dirty, setDirty] = useState(0);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [stt, setStt] = useState<SttState>({ status: "idle" });
@@ -131,6 +137,29 @@ export function Editor({ id }: { id: string }) {
     return () => clearTimeout(h);
   }, [toast]);
 
+  /** Brand on/off: the server copies logo and fonts, so pending edits are saved first and the result is loaded back. */
+  const setBrand = async (brandId: string | null) => {
+    const cur = specRef.current;
+    if (!cur || brandBusy) return;
+    setBrandBusy(true);
+    try {
+      const json = JSON.stringify(cur);
+      if (json !== lastSaved.current) { const r = await api.saveSpec(id, cur); lastSaved.current = json; lastRev.current = r.updatedAt; }
+      const r = await api.applyBrand(id, brandId);
+      lastSaved.current = JSON.stringify(r.spec);
+      lastRev.current = (await api.rev(id)).updatedAt;
+      specRef.current = r.spec;
+      setSpec(r.spec);
+      push(r.spec);
+      api.assets(id).then(setAssets).catch(() => {});
+      setToast(r.missingFonts.length ? tRef.current("fontMissing", { f: r.missingFonts.join(", ") }) : brandId ? tRef.current("brandApplied", { name: r.spec.meta.brand?.name ?? "" }) : tRef.current("brandRemoved"));
+    } catch (e) {
+      setToast((e as Error).message);
+    } finally {
+      setBrandBusy(false);
+    }
+  };
+
   const push = (next: MotionSpec, key?: string) => {
     const h = hist.current;
     const now = Date.now();
@@ -149,7 +178,10 @@ export function Editor({ id }: { id: string }) {
     const cur = specRef.current;
     if (!cur) return false;
     try {
-      const r = applyPatch(cur, ops);
+      let r = applyPatch(cur, ops);
+      // Brand logo bug: always as long as the video (the server does the same on save).
+      const sync = syncWatermark(r.spec);
+      if (sync.length) r = applyPatch(r.spec, sync);
       specRef.current = r.spec;
       setSpec(r.spec);
       push(r.spec, key);
@@ -594,12 +626,14 @@ export function Editor({ id }: { id: string }) {
       <Panel spec={spec} t={t} selected={selected} tab={tab} setTab={setTab} apply={apply} seek={seek} select={setSelected}
         assets={assets} comments={comments} saveComments={saveComments} currentSceneId={currentScene?.id}
         onGenerateImage={(lid, prompt) => void genImage(lid, prompt)} imgBusy={imgBusy}
+        projectId={id} brands={brands} onBrand={(b) => void setBrand(b)} onManageBrands={() => setShowBrands(true)} brandBusy={brandBusy}
         media={{ uploads, stt, caps, defaultProvider: settings?.transcription.provider ?? "local", defaultLanguage: settings?.transcription.language ?? "auto",
           onUpload: (f) => void uploadFiles(f), onRecord: () => setShowRecord(true), onAdd: (a, as) => addAsset(a, as),
           onTranscribe: (src, pr, lang) => void runTranscribe(src, pr, lang),
           onAddCaptions: () => { const s = specRef.current; if (s) { const cap = captionsLayer(s); apply([{ op: "add", layer: cap }]); setSelected(cap.id); } } }} />
 
       {toast && <div className="toast" role="alert" onClick={() => setToast(null)}>{toast}</div>}
+      {showBrands && <BrandsDialog onClose={() => { setShowBrands(false); void loadBrands(); }} />}
       {showExport && <ExportDialog projectId={id} spec={spec} onClose={() => setShowExport(false)} />}
       {showRecord && <RecordDialog onClose={() => setShowRecord(false)} onDone={(b, ext, l, tr) => void finishRecording(b, ext, l, tr)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} onSaved={(s) => { setSettings(s); api.capabilities().then(setCaps).catch(() => {}); }} />}

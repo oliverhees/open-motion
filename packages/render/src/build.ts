@@ -17,10 +17,14 @@ export interface BuildOptions {
   audioOverrides?: Record<string, string>;
   /** Relative path in the composition → absolute file to copy there. */
   extraFiles?: Record<string, string>;
+  /** Transparent background (WebM/MOV with alpha). */
+  transparent?: boolean;
+  /** Layer ids to leave out. */
+  hide?: string[];
 }
 
 export async function buildComposition(spec: MotionSpec, opts: BuildOptions): Promise<CompileResult & { dir: string }> {
-  const result = compile(spec, { scale: opts.scale ?? 1, audioOverrides: opts.audioOverrides });
+  const result = compile(spec, { scale: opts.scale ?? 1, audioOverrides: opts.audioOverrides, transparent: opts.transparent, hide: opts.hide });
   if (opts.clean !== false) await rm(opts.outDir, { recursive: true, force: true });
   await mkdir(opts.outDir, { recursive: true });
   const missing: string[] = [];

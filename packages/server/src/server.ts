@@ -8,7 +8,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { Store, HttpError, type Comment } from "./store.ts";
-import { sanitize, type ExportRequest } from "./jobs.ts";
+import { exportName, sanitize, withDefaults, type ExportRequest } from "./jobs.ts";
 import { SettingsStore, type Provider } from "./settings.ts";
 import { receiveUpload } from "./media.ts";
 import { localAvailable } from "./transcribe.ts";
@@ -23,6 +23,7 @@ import { detectHardware, estimate, readStats } from "@openmotion/render";
 import { applyPatch, FORMATS, getStyle, type Format, type MotionSpec } from "@openmotion/core";
 import { ensureFonts, missingFamilies, previewFont } from "./fonts.ts";
 import { imagesAvailable, kieCredits, localMcps } from "./integrations.ts";
+import { applyBrand, BrandStore, type BrandInput } from "./brands.ts";
 
 export interface ServerOptions {
   dataDir: string;
@@ -32,7 +33,7 @@ export interface ServerOptions {
   extra?: (req: http.IncomingMessage, res: http.ServerResponse, ctx: ServerContext) => Promise<boolean>;
 }
 
-export interface ServerContext { store: Store; settings: SettingsStore; queue: FileQueue; auth: Auth; tasks: Tasks; dataDir: string; examplesDir: string }
+export interface ServerContext { store: Store; settings: SettingsStore; queue: FileQueue; auth: Auth; tasks: Tasks; brands: BrandStore; dataDir: string; examplesDir: string }
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -64,7 +65,8 @@ export function createServer(opts: ServerOptions) {
   const auth = new Auth(opts.dataDir);
   const statsFile = path.resolve(opts.dataDir, "render-stats.json");
   const modelsDir = path.resolve(opts.dataDir, "models");
-  const ctx: ServerContext = { store, settings, queue, auth, tasks, dataDir: opts.dataDir, examplesDir: opts.examplesDir };
+  const brands = new BrandStore(opts.dataDir);
+  const ctx: ServerContext = { store, settings, queue, auth, tasks, brands, dataDir: opts.dataDir, examplesDir: opts.examplesDir };
   let localCache: { at: number; ok: boolean } | null = null;
 
   return http.createServer(async (req, res) => {
@@ -185,13 +187,45 @@ export function createServer(opts: ServerOptions) {
           if (!job) throw new HttpError(404, "job not found");
           return json(res, 200, view(job));
         }
+        if (parts[1] === "brands") {
+          // Brand kits: ["api","brands", id?, "logo" | "font"?, slot?]
+          const bid = parts[2];
+          if (!bid && m === "GET") return json(res, 200, { brands: await brands.list(), default: (await settings.read()).brand ?? null });
+          if (!bid && m === "POST") return json(res, 201, await brands.create(await readBody<BrandInput>(req)));
+          if (bid && !parts[3] && m === "PUT") return json(res, 200, await brands.update(bid, await readBody<BrandInput>(req)));
+          if (bid && !parts[3] && m === "DELETE") {
+            await brands.remove(bid);
+            if ((await settings.read()).brand === bid) await settings.update({ brand: null });
+            return json(res, 200, { ok: true });
+          }
+          if (bid && parts[3] === "logo" && m === "POST") return json(res, 200, await brands.setLogo(bid, await readRaw(req, 10 * 1024 * 1024), String(req.headers["content-type"] ?? "")));
+          if (bid && parts[3] === "logo" && m === "GET") {
+            const b = await brands.get(bid);
+            if (!b.logo) throw new HttpError(404, "no logo");
+            return sendFile(req, res, path.join(brands.dir(bid), b.logo), false);
+          }
+          if (bid && parts[3] === "font" && m === "POST") {
+            const slot = url.searchParams.get("slot") === "body" ? "body" : "display";
+            const weight = Number(url.searchParams.get("weight")) || undefined;
+            return json(res, 200, await brands.setFont(bid, slot, await readRaw(req, 10 * 1024 * 1024), url.searchParams.get("name") ?? "font.woff2", url.searchParams.get("family") ?? "", weight));
+          }
+          if (bid && parts[3] === "font" && (parts[4] === "display" || parts[4] === "body") && m === "GET") {
+            const f = (await brands.get(bid)).fonts[parts[4]];
+            if (!f?.file) throw new HttpError(404, "no font file");
+            return sendFile(req, res, path.join(brands.dir(bid), f.file), false);
+          }
+        }
         if (parts[1] === "projects" && parts.length === 2) {
           if (m === "GET") return json(res, 200, await store.list());
           if (m === "POST") {
-            const body = await readBody<{ title?: string; template?: string; lang?: string; format?: string; style?: string }>(req);
+            const body = await readBody<{ title?: string; template?: string; lang?: string; format?: string; style?: string; brand?: string | null }>(req);
             const format = (FORMATS as readonly string[]).includes(body.format ?? "") ? (body.format as Format) : undefined;
             const style = getStyle(body.style)?.id;
-            return json(res, 201, await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en", { format, style }));
+            const info = await store.create(body.title ?? "", body.template === "example" ? "example" : "blank", body.lang === "de" ? "de" : "en", { format, style });
+            // Brand: the one chosen, or the default brand; null = none.
+            const brandId = body.brand === null ? null : body.brand ?? (await settings.read()).brand ?? null;
+            if (brandId && body.template !== "example") await applyBrand(store, brands, info.id, brandId).catch(() => null);
+            return json(res, 201, info);
           }
         }
         if (parts[1] === "projects" && parts[2]) {
@@ -217,6 +251,10 @@ export function createServer(opts: ServerOptions) {
             return json(res, 200, { ok: true });
           }
           if (sub === "assets" && m === "GET") return json(res, 200, await store.assets(id));
+          if (sub === "brand" && m === "POST") {
+            const body = await readBody<{ brand?: string | null }>(req);
+            return json(res, 200, await applyBrand(store, brands, id, body.brand ?? null));
+          }
           if (sub === "history" && m === "GET") return json(res, 200, await store.history(id));
           if (sub === "upload" && m === "POST") {
             const name = url.searchParams.get("name");
@@ -251,12 +289,11 @@ export function createServer(opts: ServerOptions) {
             return json(res, 202, view(job));
           }
           if (sub === "export" && m === "POST") {
-            const request = sanitize(await readBody<Partial<ExportRequest>>(req));
             const { spec } = await store.read(id);
+            const request = withDefaults(sanitize(await readBody<Partial<ExportRequest>>(req)), spec);
             const w = readWorker(opts.dataDir);
             const est = await estimate(spec, { ...request, statsFile, hardware: w?.hardware });
-            const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-            const name = `${id}-${request.height}p-${stamp}.${request.format}`;
+            const name = exportName(id, request);
             const job = await queue.enqueue("export", { projectId: id, spec, request, name }, { projectId: id, request, estimateSeconds: est.seconds, plan: est.plan });
             return json(res, 202, { ...view(job), workerOnline: !!w?.online });
           }
@@ -297,6 +334,18 @@ export function createServer(opts: ServerOptions) {
 function json(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(data));
+}
+
+async function readRaw(req: http.IncomingMessage, limit: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > limit) throw new HttpError(413, `File too large (max ${Math.round(limit / 1024 / 1024)} MB).`);
+    chunks.push(c as Buffer);
+  }
+  if (!size) throw new HttpError(400, "empty upload");
+  return Buffer.concat(chunks);
 }
 
 async function readBody<T>(req: http.IncomingMessage, limit = 8 * 1024 * 1024): Promise<T> {

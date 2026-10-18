@@ -43,7 +43,7 @@ input[type="color"] { padding: 0; width: 28px; height: 28px; border: none; backg
 .empty { padding: 32px; text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--muted); }
 
 /* Editor layout */
-.editor { display: grid; grid-template-rows: 44px 1fr auto auto; grid-template-columns: 1fr 320px; height: 100%; }
+.editor { display: grid; grid-template-rows: 44px 1fr auto auto; grid-template-columns: 1fr 344px; height: 100%; }
 .top { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .top .title { background: transparent; border-color: transparent; font-weight: 600; width: auto; min-width: 120px; max-width: 420px; }
 .top .title:hover { border-color: var(--line); }
@@ -77,7 +77,7 @@ input[type="color"] { padding: 0; width: 28px; height: 28px; border: none; backg
 
 .side { grid-row: 2 / 5; grid-column: 2; border-left: 1px solid var(--line); background: var(--panel); display: grid; grid-template-rows: auto 1fr; min-height: 0; }
 .tabs { display: flex; gap: 0; padding: 8px 6px 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
-.tabs button { background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 6px 7px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+.tabs button { background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 6px 5px; font-size: 12px; white-space: nowrap; flex: 1 0 auto; }
 .tabs button.on { color: var(--text); border-bottom-color: var(--sel); }
 .tabbody { overflow-y: auto; overflow-x: hidden; padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-content: start; }
 .tabbody > *, .sec > * { min-width: 0; }
@@ -171,7 +171,7 @@ select { text-overflow: ellipsis; }
 .sugg button { padding: 2px 8px; font-size: 12px; }
 
 /* AI chat (left, like Motion) */
-.editor.with-chat { grid-template-columns: 300px minmax(0, 1fr) 320px; }
+.editor.with-chat { grid-template-columns: 300px minmax(0, 1fr) 344px; }
 .editor.with-chat .stagewrap, .editor.with-chat .transport, .editor.with-chat .scenes { grid-column: 2; }
 .editor.with-chat .side { grid-column: 3; }
 .chat { grid-column: 1; grid-row: 2 / 5; border-right: 1px solid var(--line); background: var(--panel); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; }
@@ -241,3 +241,54 @@ select { text-overflow: ellipsis; }
 .integ { display: grid; gap: 3px; margin-top: 8px; font-size: 12px; }
 .integ .ok { color: var(--ok); }
 .integ .warn { color: var(--key); }
+
+/* Export: five formats wrap on narrow dialogs; background layer checklist */
+.seg.fmts { flex-wrap: wrap; min-width: 260px; }
+.seg.fmts button { flex: 1 1 auto; padding: 5px 10px; white-space: nowrap; }
+.hidelist { display: grid; gap: 4px; min-width: 200px; }
+.hidelist label.check { display: flex; gap: 6px; align-items: center; }
+.hidelist label.check input { width: auto; }
+
+/* Brand kits */
+.modal.brands { width: min(860px, 94vw); }
+.br-grid { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 680px) { .br-grid { grid-template-columns: 1fr; } }
+.br-list { display: grid; gap: 6px; }
+.br-item { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px; }
+.br-item.on { border-color: var(--sel); background: var(--sel-soft); }
+.br-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; background: rgba(255,255,255,.06); }
+.br-item i { width: 28px; height: 28px; border-radius: 50%; flex: none; }
+.br-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.br-add { border-style: dashed; }
+.br-empty { padding: 24px 8px; }
+.br-form { display: grid; gap: 10px; }
+.br-h { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.br-preview { border-radius: 12px; padding: 18px; display: grid; gap: 8px; min-height: 150px; border: 1px solid var(--line); }
+.br-preview strong { font-size: 30px; line-height: 1.05; }
+.br-pv-logo { height: 36px; max-width: 160px; object-fit: contain; object-position: left; }
+.br-pv-logo.ph { display: inline-grid; place-items: center; width: 64px; border: 1px dashed currentColor; border-radius: 6px; font-size: 11px; opacity: .5; }
+.br-pv-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.br-pv-row em { font-style: normal; font-weight: 700; font-size: 12px; padding: 5px 10px; border-radius: 999px; }
+.br-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.br-color { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.br-color input[type=color] { width: 30px; height: 30px; padding: 0; border-radius: 6px; flex: none; }
+.br-color span { flex: 1; }
+button.xs { padding: 0 6px; font-size: 11px; }
+button.danger { color: #ff6b6b; }
+.br-font input, .br-font select { font-size: 12px; }
+.brandpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.brandpick .fmt { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; }
+.brandpick img { height: 18px; max-width: 60px; object-fit: contain; }
+.brandpick .fmt i { border: none; opacity: 1; min-width: 14px; }
+
+/* Templates */
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.tpl-card { display: flex; align-items: center; gap: 8px; padding: 8px; text-align: left; min-height: 44px; }
+.tpl-card.on { border-color: var(--sel); background: var(--sel-soft); }
+.tpl-ic { font-size: 18px; width: 24px; text-align: center; flex: none; }
+.tpl-name { font-size: 12px; line-height: 1.2; }
+.tpl-form { display: grid; gap: 8px; margin-top: 10px; padding: 10px; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--raised); }
+.tpl-pv { position: relative; overflow: hidden; border-radius: 8px; border: 1px solid var(--line); background: #000; }
+.tpl-pv iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+.tpl-field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.tpl-field input, .tpl-field textarea { width: 100%; font-size: 13px; }

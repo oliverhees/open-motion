@@ -71,6 +71,11 @@ Version 1. Maßeinheiten: Pixel auf der Design-Leinwand (z. B. 1920×1080), Zeit
 "out": { "type": "fade", "duration": 0.35 }
 ```
 
-Typen: `fade`, `slideUp`, `slideDown`, `slideLeft`, `slideRight`, `pop`, `wipe`, `blur`.
+Typen: `fade`, `slideUp`, `slideDown`, `slideLeft`, `slideRight`, `pop`, `wipe`, `wipeLeft`, `wipeUp`, `wipeDown`, `maskUp`, `iris`, `zoomIn`, `zoomOut`, `blur`.
 
 Übergänge laufen auf einer eigenen Box. Sie vertragen sich deshalb mit Keyframes auf Position oder Größe.
+
+## 🧩 Vorlagen und Marke
+
+- **Vorlage einfügen:** `{"op":"template","id":"lowerthird","at":3.5,"values":{"name":"Mara","role":"Gründerin"}}`. Szenen-Vorlagen kommen als neue Szene hinter die Szene bei `at`, Einblendungen erscheinen bei `at`. Liste aller Vorlagen und Felder: MCP-Werkzeug `list_templates`.
+- **Marke:** `meta.brand` enthält die Marke des Projekts (Name, Logo-Pfad, Slogan, Website, Handle, Schriften) und was sie ersetzt hat (`prev`). Zum Abnehmen den Editor („Keine Marke") oder das MCP-Werkzeug `apply_brand` mit `null` nutzen, das stellt auch Palette und Schriften wieder her.
