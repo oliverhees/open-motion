@@ -15,7 +15,7 @@ export function formatNotes(spec: MotionSpec): string {
   return `FORMAT 16:9 (${W}×${H}). Safe: 120 px sides, 100 px top/bottom. Headline ≥ 84 px (hero 120–200 px), body ≥ 40 px.`;
 }
 
-export function motionGuide(spec: MotionSpec): string {
+export function motionGuide(spec: MotionSpec, opts: { images?: boolean; viaMcp?: boolean } = {}): string {
   const st = getStyle(spec.meta.style);
   const pal = Object.keys(spec.style?.palette ?? {}).map((k) => `$${k}`).join(", ") || "(none yet: set one with the style op)";
   return `${formatNotes(spec)}
@@ -60,7 +60,11 @@ text: text (use \\n for lines, [[word]] = highlight), style {fontFamily (any Goo
   count (number counts up, replaces text): {"from":0,"to":4.8,"decimals":1,"prefix":"","suffix":" Mio.","duration":1.6,"delay":0.2}.
 shape: shape rect|ellipse, fill (color or CSS gradient incl. radial-gradient), stroke, strokeWidth, radius.
 svg: svg (inner markup, no <svg> root), viewBox, draw? {"duration":1.2,"stagger":0.1} → strokes draw themselves, fills fade in after. Use stroke-linecap="round". Colors via style="stroke:$accent" or stroke='$accent'.
-image: src ("ai:<detailed English prompt in the art direction of the style>" generates one; max 4 per answer), fit, radius. video: src, fit, radius, muted, mediaStart.
+image: src (${opts.images === false
+    ? opts.viaMcp
+      ? 'AI images are OFF in Open Motion (no image key). If you have an image MCP (e.g. Kie AI), generate there, save the file and import_media it; otherwise draw with svg'
+      : "AI images are OFF (no image key set): do NOT use ai: sources; draw graphics with svg, shapes and type instead"
+    : '"ai:<detailed English prompt in the art direction of the style>" generates one; max 4 per answer'}), fit, radius. video: src, fit, radius, muted, mediaStart.
 captions (from the transcript, follows cuts): {"type":"captions","frame":{…},"style":{fontSize, fontWeight, color, uppercase, align, valign, fontFamily},"words":3,"active":{"color":"#111","background":"$accent","scale":1.08},"fixed":true}.
 Canvas texture: {"op":"canvas","set":{"texture":{"grain":0.4,"vignette":0.5,"scanlines":0}}}.
 Camera (absolute seconds, moves everything except fixed layers): {"op":"camera","set":{"keys":{"zoom":[{"t":0,"v":1},{"t":6,"v":1.06,"ease":"sine.inOut"}],"x":[…],"y":[…],"rotation":[…]}}}. x/y = where the camera looks (px offset from center).
@@ -101,7 +105,7 @@ hook in 0–1 s · readable at phone size (sizes above) · nothing outside the s
 }
 
 /** System prompt for the editor AI (one JSON answer per turn). */
-export function systemPrompt(spec: MotionSpec, uiLang?: "de" | "en"): string {
+export function systemPrompt(spec: MotionSpec, uiLang?: "de" | "en", opts: { images?: boolean } = {}): string {
   const lang = (uiLang ?? (spec.meta.lang?.startsWith("en") ? "en" : "de")) === "en" ? "English" : "German";
   return `You are the motion director of Open Motion — a world-class motion designer (Apple keynote films, Stripe and Linear launches, top YouTube explainers). You build and change videos ONLY through patch operations on a Motion-Spec. Your work must make people say "how did they do that?".
 
@@ -115,5 +119,5 @@ THE MESSAGE: talk to the user like a director in a chat, in ${lang}. 2–5 short
 
 RULES: change only what is asked; existing layers keep their ids; new ids lowercase-with-dashes, unique. Big builds: plan the beat sheet in your head first (hook → points → payoff → end card), then write all ops.
 
-${motionGuide(spec)}`;
+${motionGuide(spec, opts)}`;
 }

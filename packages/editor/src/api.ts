@@ -2,6 +2,7 @@ import type { MotionSpec } from "@openmotion/core";
 
 export interface ProjectInfo { id: string; title: string; createdAt: string; updatedAt: string; duration?: number }
 export interface Comment { id: string; t: number; layer?: string; x?: number; y?: number; text: string; toAI: boolean; status: "open" | "queued" | "done"; createdAt: string; reply?: string }
+export interface Integrations { images: boolean; imageProvider: string; kieCredits: number | null; mcps: { tool: string; name: string }[]; kieMcp: { tool: string; name: string }[] }
 /** A question the AI asks back; shown as a form in the chat. */
 export interface AskQuestion { id: string; q: string; options: string[]; multi?: boolean; free?: boolean }
 export interface ChatEntry {
@@ -41,6 +42,7 @@ export const api = {
   create: (title: string, template: "blank" | "example", lang?: string, format?: string, style?: string) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang, format, style }) }),
   /** Voice → text (local Whisper or the configured service). */
   dictate: (audio: Blob, lang: string) => req<Task<{ text: string }>>(`/api/dictate?lang=${encodeURIComponent(lang)}`, { method: "POST", body: audio, headers: { "content-type": audio.type || "audio/webm" } }),
+  integrations: () => req<Integrations>("/api/integrations"),
   fontUrl: (family: string) => `/api/fontfile/${encodeURIComponent(family)}`,
   read: (id: string) => req<{ project: ProjectInfo; spec: MotionSpec; comments: Comment[] }>(`/api/projects/${id}`),
   rev: (id: string) => req<{ updatedAt: string }>(`/api/projects/${id}/rev`),

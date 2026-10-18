@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
+import { api, type Integrations, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
 import { useT, type Key } from "./i18n.ts";
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
@@ -25,6 +25,8 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
   const [tokName, setTokName] = useState("");
   const [fresh, setFresh] = useState<string | null>(null);
   useEffect(() => { api.tokens().then(setTokens).catch(() => setTokens(null)); }, []);
+  const [integ, setInteg] = useState<Integrations | null>(null);
+  useEffect(() => { api.integrations().then(setInteg).catch(() => setInteg(null)); }, []);
   const makeToken = async () => {
     try {
       const r = await api.createToken(tokName || "KI");
@@ -84,6 +86,14 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
             </select>
             <input value={s.images.model ?? ""} placeholder={IMG_DEFAULTS[s.images.provider]} onChange={(e) => setS({ ...s, images: { ...s.images, model: e.target.value } })} aria-label={t_("model")} />
           </div>
+          {integ && (
+            <div className="integ">
+              <span className={integ.images ? "ok" : "warn"}>{integ.images ? `✓ ${t_("imgReady")}` : `○ ${t_("imgOff")}`}</span>
+              {integ.kieCredits !== null && <span>Kie.ai: {t_("kieCredits", { n: Math.round(integ.kieCredits) })}</span>}
+              {integ.kieMcp.length > 0 && <span>✓ {t_("kieMcpFound", { where: integ.kieMcp.map((x) => `${x.tool} (${x.name})`).join(", ") })}</span>}
+              {integ.mcps.length > 0 && <small className="muted">{t_("mcpsFound", { list: [...new Set(integ.mcps.map((x) => x.tool))].join(", ") })}</small>}
+            </div>
+          )}
         </div>
         <div className="sec">
           <h3>{t_("transcript")}</h3>

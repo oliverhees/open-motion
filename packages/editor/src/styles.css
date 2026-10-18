@@ -237,3 +237,7 @@ select { text-overflow: ellipsis; }
 .fmt.on { border-color: var(--sel); background: var(--sel-soft); color: var(--sel); }
 .fmt i { display: block; border: 2px solid currentColor; border-radius: 3px; opacity: 0.8; }
 .fmt small { font-size: 11px; color: var(--muted); }
+
+.integ { display: grid; gap: 3px; margin-top: 8px; font-size: 12px; }
+.integ .ok { color: var(--ok); }
+.integ .warn { color: var(--key); }

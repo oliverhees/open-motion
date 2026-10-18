@@ -22,6 +22,7 @@ import { workerFile, type WorkerInfo } from "./worker.ts";
 import { detectHardware, estimate, readStats } from "@openmotion/render";
 import { applyPatch, FORMATS, getStyle, type Format, type MotionSpec } from "@openmotion/core";
 import { ensureFonts, missingFamilies, previewFont } from "./fonts.ts";
+import { imagesAvailable, kieCredits, localMcps } from "./integrations.ts";
 
 export interface ServerOptions {
   dataDir: string;
@@ -144,6 +145,11 @@ export function createServer(opts: ServerOptions) {
               : { area: "System", name: "Render-Worker", ok: false, ms: 0, detail: "noch nie gestartet", hint: "Worker-Dienst starten (OPENMOTION_ROLE=worker) oder lokal mit OPENMOTION_ROLE=all." });
             return { checks, report: formatReport(checks, s) };
           }));
+        }
+        if (parts[1] === "integrations" && m === "GET") {
+          const s = await settings.read();
+          const mcps = localMcps();
+          return json(res, 200, { images: imagesAvailable(s), imageProvider: s.images.provider, kieCredits: await kieCredits(s), mcps, kieMcp: mcps.filter((x) => /kie/i.test(x.name)) });
         }
         if (parts[1] === "fontfile" && parts[2] && m === "GET") {
           const file = await previewFont(parts[2], path.resolve(opts.dataDir, "fontcache"));

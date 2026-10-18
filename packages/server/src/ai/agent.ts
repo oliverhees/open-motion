@@ -11,6 +11,7 @@ import { ensureFonts } from "../fonts.ts";
 import { systemPrompt } from "./guide.ts";
 import { aspectFor, generateImage } from "./images.ts";
 import { renderFrames } from "../frames.ts";
+import { imagesAvailable } from "../integrations.ts";
 
 export type AgentKind = "chat" | "comment" | "transcript";
 
@@ -49,7 +50,7 @@ const MAX_IMAGES = 4;
 export async function runAgent(req: AgentRequest, ctx: { settings: Settings; projectDir: string; fetch?: Fetch; onProgress?: (p: AiProgress) => void }): Promise<AgentResult> {
   const f = ctx.fetch ?? httpFetch;
   const progress = ctx.onProgress ?? (() => {});
-  const system = systemPrompt(req.spec, req.lang);
+  const system = systemPrompt(req.spec, req.lang, { images: imagesAvailable(ctx.settings) || process.env.OPENMOTION_FAKE_AI === "1" });
   const convo: Msg[] = [...history(req), { role: "user", content: `${context(req)}\n\n${task(req)}` }];
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {

@@ -24,6 +24,7 @@ import { PROVIDERS, type Provider } from "./settings.ts";
 import { motionGuide } from "./ai/guide.ts";
 import { renderFrames } from "./frames.ts";
 import { ensureFonts } from "./fonts.ts";
+import { imagesAvailable } from "./integrations.ts";
 
 const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const VERSION = "0.1.0";
@@ -37,7 +38,8 @@ Work like a top motion director:
 4. BEAT SHEET: plan hook (0–1 s) → points (a new visual idea every 2–4 s) → payoff → end card, with times and a motion verb per element.
 5. BUILD with apply_patch (big batches are fine). For recordings: anchor graphics to words, captions, cut fillers.
 6. LOOK & FIX: call look (frames as images). Be a harsh motion director, not a proud author: score hook, readability at phone size, hierarchy, spacing/overlaps, safe area, pace, polish (1–10). Fix the 3 worst issues, look again, repeat until everything is ≥ 8.
-7. export_video → job_status → give the user the link.`;
+7. export_video → job_status → give the user the link.
+Images: if Open Motion has no image key (spec_reference says so) but you have an image MCP (e.g. Kie AI), generate the image there, save it, import_media it and use the asset path.`;
 
 /** A tool result that is not plain text (e.g. images). */
 class McpContent {
@@ -97,7 +99,7 @@ const TOOLS: Tool[] = [
     inputSchema: obj({ project: { ...project, description: "Optional: adds canvas size and palette of this project" } }),
     run: async (a, c) => {
       const spec = a.project ? (await c.store.read(a.project)).spec : ({ meta: { title: "", lang: "de" }, canvas: { width: 1920, height: 1080, fps: 30 }, scenes: [], layers: [] } as unknown as MotionSpec);
-      return motionGuide(spec);
+      return motionGuide(spec, { images: imagesAvailable(await c.settings.read()), viaMcp: true });
     },
   },
   {
