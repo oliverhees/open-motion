@@ -32,7 +32,7 @@ export type PatchOp =
   | { op: "removeScene"; id: string; removeLayers?: boolean }
   | { op: "style"; set: NonNullable<MotionSpec["style"]> }
   | { op: "canvas"; set: Partial<MotionSpec["canvas"]> }
-  | { op: "meta"; set: Partial<MotionSpec["meta"]> }
+  | { op: "meta"; set: { [K in keyof MotionSpec["meta"]]?: MotionSpec["meta"][K] | null } }
   /** Set the camera (push-ins, pans, zoom to a target; absolute seconds). null removes it. */
   | { op: "camera"; set: MotionSpec["camera"] | null }
   /** Replace the transcript (null removes it). Anchors on vanished words move to the nearest new word. */
@@ -235,7 +235,9 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
       return;
     }
     case "meta": {
-      spec.meta = { ...spec.meta, ...op.set };
+      // null removes a field (JSON has no undefined), e.g. {"brand": null} takes the brand off.
+      spec.meta = { ...spec.meta, ...op.set } as MotionSpec["meta"];
+      for (const [k, v] of Object.entries(op.set)) if (v === null || v === undefined) delete (spec.meta as Record<string, unknown>)[k];
       return;
     }
     default:

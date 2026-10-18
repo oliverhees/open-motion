@@ -9,6 +9,7 @@ export function describe(spec: MotionSpec): string {
   const lines: string[] = [];
   const c = spec.canvas;
   lines.push(`Project "${spec.meta.title}" — canvas ${c.width}×${c.height}, ${c.fps} fps${spec.meta.style ? `, style ${spec.meta.style}` : ""}`);
+  if (spec.meta.brand) lines.push(`Brand: ${spec.meta.brand.name}${spec.meta.brand.logo ? ` (logo ${spec.meta.brand.logo})` : ""}`);
   if (spec.style?.palette) lines.push(`Palette: ${Object.entries(spec.style.palette).map(([k, v]) => `$${k}=${v}`).join(", ")}`);
   if (spec.style?.fonts?.length) lines.push(`Fonts: ${[...new Set(spec.style.fonts.map((x) => x.family))].join(", ")}`);
   if (c.texture) lines.push(`Texture: ${Object.entries(c.texture).map(([k, v]) => `${k} ${v}`).join(", ")}`);

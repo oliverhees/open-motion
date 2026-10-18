@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { facecamFrame, layerTiming, sceneTimings, valueAt, type AnimProp, type FacecamLayout, type Layer, type MotionSpec, type PatchOp, type TransitionType } from "@openmotion/core";
 import { fmtTime, type Asset, type Comment } from "./api.ts";
+import type { Brand } from "@openmotion/core";
 import { MediaTab } from "./MediaTab.tsx";
 import type { ComponentProps } from "react";
 import { useT, type Key } from "./i18n.ts";
@@ -16,6 +17,7 @@ interface Props {
   media: Omit<ComponentProps<typeof MediaTab>, "spec" | "t" | "selected" | "assets" | "apply" | "seek">;
   onGenerateImage: (layerId: string, prompt: string) => void;
   imgBusy: { id: string; started: number } | null;
+  brands: Brand[]; onBrand: (id: string | null) => void; onManageBrands: () => void; brandBusy: boolean;
 }
 
 const TRANSITIONS: TransitionType[] = ["fade", "slideUp", "slideDown", "slideLeft", "slideRight", "pop", "blur", "zoomIn", "zoomOut", "maskUp", "wipe", "wipeLeft", "wipeUp", "wipeDown", "iris"];
@@ -306,11 +308,25 @@ function LayersTab({ spec, selected, select, apply, seek, t }: Props) {
   );
 }
 
-function StyleTab({ spec, apply }: Props) {
+function StyleTab({ spec, apply, brands, onBrand, onManageBrands, brandBusy }: Props) {
   const t_ = useT();
   const palette = spec.style?.palette ?? {};
+  const cur = spec.meta.brand?.id ?? "";
   return (
     <>
+      <section className="sec">
+        <h3>{t_("brandSection")}</h3>
+        <div className="brandpick" style={{ marginTop: 0 }}>
+          <button className={`fmt${!cur ? " on" : ""}`} aria-pressed={!cur} disabled={brandBusy} onClick={() => cur && onBrand(null)}><span>{t_("brandNone")}</span></button>
+          {brands.map((b) => (
+            <button key={b.id} className={`fmt${cur === b.id ? " on" : ""}`} aria-pressed={cur === b.id} disabled={brandBusy} onClick={() => onBrand(b.id)} title={cur === b.id ? t_("brandReapply") : undefined}>
+              {b.logo ? <img src={`/api/brands/${b.id}/logo?v=${encodeURIComponent(b.logo)}`} alt="" /> : <i style={{ background: b.colors.accent, width: 14, height: 14, borderRadius: 7 }} />}<span>{b.name}</span>
+            </button>
+          ))}
+          {cur && !brands.some((b) => b.id === cur) && <span className="chip">{spec.meta.brand?.name}</span>}
+        </div>
+        <button className="ghost" style={{ marginTop: 6 }} onClick={onManageBrands}>{brands.length ? t_("brandManage") : `＋ ${t_("brandAdd")}`}</button>
+      </section>
       <section className="sec">
         <h3>{t_("palette")}</h3>
         {Object.entries(palette).map(([name, c]) => (
@@ -329,7 +345,9 @@ function StyleTab({ spec, apply }: Props) {
       <section className="sec">
         <h3>{t_("fonts")}</h3>
         {(spec.style?.fonts ?? []).length === 0 ? <p className="muted" style={{ margin: 0 }}>{t_("noFonts")}</p>
-          : spec.style!.fonts!.map((f) => <div key={f.src} style={{ fontFamily: `"${f.family}"`, fontSize: 18 }}>{f.family}</div>)}
+          : [...new Set(spec.style!.fonts!.map((f) => f.family))].map((fam) => (
+            <div key={fam} style={{ fontFamily: `"${fam}"`, fontSize: 18 }}>{fam} <span className="muted" style={{ fontFamily: "system-ui", fontSize: 11 }}>{spec.style!.fonts!.filter((f) => f.family === fam).map((f) => f.weight ?? "").filter(Boolean).join(" · ")}</span></div>
+          ))}
       </section>
     </>
   );

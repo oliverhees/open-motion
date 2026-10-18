@@ -13,7 +13,7 @@ import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { applyPatch, compositionDuration, validateSpec, SpecError, FORMAT_SIZE, getStyle, type Format, type MotionSpec, type Layer } from "@openmotion/core";
+import { applyPatch, compositionDuration, syncWatermark, validateSpec, SpecError, FORMAT_SIZE, getStyle, type Format, type MotionSpec, type Layer } from "@openmotion/core";
 import { ensureFonts } from "./fonts.ts";
 import { probe } from "./media.ts";
 
@@ -115,6 +115,9 @@ export class Store {
 
   async saveSpec(id: string, spec: MotionSpec): Promise<{ warnings: string[]; updatedAt: string }> {
     const d = this.dir(id);
+    // The brand logo bug always spans the whole video, however long it gets.
+    const sync = syncWatermark(spec);
+    if (sync.length) spec = applyPatch(spec, sync).spec;
     const check = validateSpec(spec);
     if (!check.ok) throw new HttpError(422, new SpecError(check.errors).message);
     await this.snapshot(d);

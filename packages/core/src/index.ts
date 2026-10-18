@@ -13,3 +13,4 @@ export { normalizeCuts, removedBetween, isCutLayer, keptSegments, findSuggestion
 export { STYLES, FORMATS, FORMAT_SIZE, getStyle, styleBrief, type StyleDef, type Format } from "./styles.ts";
 export { toLottie, parseColor, LOTTIE_HINTS, type LottieOptions, type LottieResult, type LottieWarning, type LottieWarningCode } from "./lottie.ts";
 export { backgroundLayers, type BackgroundCandidate } from "./overlay.ts";
+export { brandOps, unbrandOps, brandPalette, syncWatermark, WATERMARK_ID, type Brand, type BrandColors, type BrandFont, type BrandMeta, type Corner } from "./brand.ts";

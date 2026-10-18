@@ -248,3 +248,35 @@ select { text-overflow: ellipsis; }
 .hidelist { display: grid; gap: 4px; min-width: 200px; }
 .hidelist label.check { display: flex; gap: 6px; align-items: center; }
 .hidelist label.check input { width: auto; }
+
+/* Brand kits */
+.modal.brands { width: min(860px, 94vw); }
+.br-grid { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 680px) { .br-grid { grid-template-columns: 1fr; } }
+.br-list { display: grid; gap: 6px; }
+.br-item { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px; }
+.br-item.on { border-color: var(--sel); background: var(--sel-soft); }
+.br-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; background: rgba(255,255,255,.06); }
+.br-item i { width: 28px; height: 28px; border-radius: 50%; flex: none; }
+.br-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.br-add { border-style: dashed; }
+.br-empty { padding: 24px 8px; }
+.br-form { display: grid; gap: 10px; }
+.br-h { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.br-preview { border-radius: 12px; padding: 18px; display: grid; gap: 8px; min-height: 150px; border: 1px solid var(--line); }
+.br-preview strong { font-size: 30px; line-height: 1.05; }
+.br-pv-logo { height: 36px; max-width: 160px; object-fit: contain; object-position: left; }
+.br-pv-logo.ph { display: inline-grid; place-items: center; width: 64px; border: 1px dashed currentColor; border-radius: 6px; font-size: 11px; opacity: .5; }
+.br-pv-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.br-pv-row em { font-style: normal; font-weight: 700; font-size: 12px; padding: 5px 10px; border-radius: 999px; }
+.br-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.br-color { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.br-color input[type=color] { width: 30px; height: 30px; padding: 0; border-radius: 6px; flex: none; }
+.br-color span { flex: 1; }
+button.xs { padding: 0 6px; font-size: 11px; }
+button.danger { color: #ff6b6b; }
+.br-font input, .br-font select { font-size: 12px; }
+.brandpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.brandpick .fmt { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; }
+.brandpick img { height: 18px; max-width: 60px; object-fit: contain; }
+.brandpick .fmt i { border: none; opacity: 1; min-width: 14px; }

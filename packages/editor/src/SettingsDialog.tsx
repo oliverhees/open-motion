@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Integrations, type ImageProvider, type LlmProvider, type Provider, type PublicSettings } from "./api.ts";
+import { BrandsDialog } from "./BrandsDialog.tsx";
 import { useT, type Key } from "./i18n.ts";
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
@@ -26,6 +27,7 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
   const [fresh, setFresh] = useState<string | null>(null);
   useEffect(() => { api.tokens().then(setTokens).catch(() => setTokens(null)); }, []);
   const [integ, setInteg] = useState<Integrations | null>(null);
+  const [showBrands, setShowBrands] = useState(false);
   useEffect(() => { api.integrations().then(setInteg).catch(() => setInteg(null)); }, []);
   const makeToken = async () => {
     try {
@@ -66,6 +68,14 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
     <div className="modal-bg" onClick={onClose}>
       <div className="modal wide" role="dialog" aria-modal="true" aria-labelledby="set-title" onClick={(e) => e.stopPropagation()}>
         <h2 id="set-title">{t_("settings")}</h2>
+        <div className="sec">
+          <h3>{t_("brands")}</h3>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={() => setShowBrands(true)}>🎨 {t_("brandManage")}</button>
+            <span className="muted">{t_("brandsShort")}</span>
+          </div>
+        </div>
+        {showBrands && <BrandsDialog onClose={() => setShowBrands(false)} />}
         <div className="sec">
           <h3>{t_("aiModel")}</h3>
           <div className="pair">

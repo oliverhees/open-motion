@@ -24,6 +24,7 @@ import { motionGuide } from "./ai/guide.ts";
 import { renderFrames } from "./frames.ts";
 import { ensureFonts } from "./fonts.ts";
 import { imagesAvailable } from "./integrations.ts";
+import { applyBrand } from "./brands.ts";
 
 const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const VERSION = "0.1.0";
@@ -33,7 +34,7 @@ const INSTRUCTIONS = `Open Motion: motion graphics as code. A video is a Motion-
 Work like a top motion director:
 1. BRIEF: who watches, where it plays (format), length, the one takeaway, real assets/facts. Ask at most 4 short questions, each with a default; if the user skips, use the defaults.
 2. DIRECTION: read spec_reference and list_styles. Propose 3 directions (style id + one-line concept) and let the user pick, unless they already said what they want.
-3. SETUP: create_project with format and style (or set them), import_media + add_facecam for recordings, transcribe → job_status.
+3. SETUP: create_project with format and style (or set them) — list_brands first: if the user has a brand, it is applied automatically (logo, colors, fonts), use its logo in intro and outro. import_media + add_facecam for recordings, transcribe → job_status.
 4. BEAT SHEET: plan hook (0–1 s) → points (a new visual idea every 2–4 s) → payoff → end card, with times and a motion verb per element.
 5. BUILD with apply_patch (big batches are fine). For recordings: anchor graphics to words, captions, cut fillers.
 6. LOOK & FIX: call look (frames as images). Be a harsh motion director, not a proud author: score hook, readability at phone size, hierarchy, spacing/overlaps, safe area, pace, polish (1–10). Fix the 3 worst issues, look again, repeat until everything is ≥ 8.
@@ -61,12 +62,35 @@ const TOOLS: Tool[] = [
   },
   {
     name: "create_project",
-    description: "Create a new project. format: 16:9 (default, YouTube), 9:16 (Shorts/Reels/TikTok), 1:1, 4:5 (feed). style: a style id from list_styles (sets palette, background and fonts). template \"example\" = explainer demo. lang \"de\"/\"en\" = language of on-screen texts.",
-    inputSchema: obj({ title: { type: "string" }, format: { type: "string", enum: [...FORMATS] }, style: { type: "string" }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
+    description: "Create a new project. format: 16:9 (default, YouTube), 9:16 (Shorts/Reels/TikTok), 1:1, 4:5 (feed). style: a style id from list_styles (sets palette, background and fonts). brand: a brand id from list_brands (logo, colors, fonts); omitted = the user's default brand, null = no brand. template \"example\" = explainer demo. lang \"de\"/\"en\" = language of on-screen texts.",
+    inputSchema: obj({ title: { type: "string" }, format: { type: "string", enum: [...FORMATS] }, style: { type: "string" }, brand: { type: ["string", "null"] }, template: { type: "string", enum: ["blank", "example"] }, lang: { type: "string", enum: ["de", "en"] } }, ["title"]),
     run: async (a, c) => {
       if (a.style && !getStyle(String(a.style))) throw new Error(`Unknown style "${a.style}". Available: ${STYLES.map((s) => s.id).join(", ")}`);
       const info = await c.store.create(String(a.title ?? ""), a.template === "example" ? "example" : "blank", a.lang === "en" ? "en" : "de", { format: FORMATS.includes(a.format) ? a.format : undefined, style: a.style });
-      return { ...info, editor_url: editorUrl(c, info.id), next: "Read spec_reference, then build with apply_patch and check with look." };
+      const brandId = a.brand === null ? null : typeof a.brand === "string" ? a.brand : (await c.settings.read()).brand ?? null;
+      let brand: string | undefined;
+      if (brandId && a.template !== "example") brand = (await applyBrand(c.store, c.brands, info.id, brandId)).spec.meta.brand?.name;
+      return { ...info, ...(brand ? { brand } : {}), editor_url: editorUrl(c, info.id), next: "Read spec_reference, then build with apply_patch and check with look." };
+    },
+  },
+  {
+    name: "list_brands",
+    description: "The user's brand kits (logo, colors, fonts, tagline, website, handle) and which one is the default. A branded video must use the brand's logo, palette and fonts.",
+    inputSchema: obj({}),
+    run: async (_a, c) => {
+      const def = (await c.settings.read()).brand;
+      const list = await c.brands.list();
+      if (!list.length) return "No brands yet. The user can add one in the editor: ⚙ Settings → Brands.";
+      return list.map((b) => `${b.id}${b.id === def ? " (default)" : ""} — ${b.name}: accent ${b.colors.accent}${b.colors.accent2 ? `, accent2 ${b.colors.accent2}` : ""}${b.colors.bg ? `, bg ${b.colors.bg}` : ""}; fonts ${b.fonts.display?.family ?? "–"} / ${b.fonts.body?.family ?? "–"}; logo ${b.logo ? "yes" : "no"}${b.tagline ? `; tagline "${b.tagline}"` : ""}${b.website ? `; ${b.website}` : ""}${b.handle ? `; ${b.handle}` : ""}${b.watermark ? `; logo bug ${b.watermark.corner}` : ""}`).join("\n");
+    },
+  },
+  {
+    name: "apply_brand",
+    description: "Put a brand on a project (palette, fonts of all text, logo copied in, optional logo bug) or take it off with brand null (restores the look from before). Afterwards get_project/spec_reference show the brand and its logo path.",
+    inputSchema: obj({ project, brand: { type: ["string", "null"], description: "Brand id from list_brands, or null to remove" } }, ["project", "brand"]),
+    run: async (a, c) => {
+      const r = await applyBrand(c.store, c.brands, a.project, a.brand ?? null);
+      return { brand: r.spec.meta.brand?.name ?? null, logo: r.spec.meta.brand?.logo, ...(r.missingFonts.length ? { missing_fonts: r.missingFonts } : {}), hint: r.spec.meta.brand ? "Use the logo in intro and outro; colors only from the palette." : "Brand removed." };
     },
   },
   {
