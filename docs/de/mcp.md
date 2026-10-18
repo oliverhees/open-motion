@@ -119,20 +119,29 @@ Sag deiner KI zum Beispiel:
 
 > Nutze Open Motion. Lege das Projekt „KI-Tools erklärt" an. Importiere `/home/ich/Videos/facecam.mp4` als Facecam im Layout „corner". Transkribiere auf Deutsch. Schneide Füllwörter und lange Pausen raus. Setze zu jeder Kernaussage einen kurzen Titel, verankert am passenden Wort. Gib mir dann den Editor-Link.
 
+**Oder als Motion Designer, von null:**
+
+> Nutze Open Motion. Mach ein 20-Sekunden-Reel in 9:16 zur Eröffnung unseres Cafés. Interview mich zuerst, schlag 3 Richtungen vor, dann bau es. Schau dir deine Frames an und verbessere alles unter 8/10, dann exportiere in 1080p.
+
+Die KI folgt einem Regie-Ablauf, der im MCP steckt: Briefing → drei Richtungen → Stil und Format → Beat-Sheet → Bauen → **eigene Frames anschauen** (`look`) und korrigieren → Export.
+
 Öffne den Link im Browser. **Jede Änderung der KI erscheint nach etwa 2 Sekunden live im Editor**, mit dem Hinweis „Von außen aktualisiert".
 
 ### 🔧 Die Werkzeuge
 
 | Werkzeug | Was es tut |
 | --- | --- |
-| `list_projects`, `create_project` | Projekte ansehen und anlegen |
+| `list_projects`, `create_project` | Projekte ansehen und anlegen (mit Format 16:9 / 9:16 / 1:1 / 4:5 und Stil) |
+| `list_styles` | Die 14 Stile mit Schriften, Palette und Bewegungsregeln |
 | `get_project`, `get_spec` | Überblick bzw. komplette Motion-Spec |
-| `spec_reference` | Regeln, Ebenen-Typen, alle Patch-Operationen |
+| `spec_reference` | Der Master-Prompt: Design-Gesetze, Engine-Referenz (Textanimation, Masken, Zähler, Zeichnen, 3D, Kamera, Texturen), Rezepte, Selbstcheck |
 | `import_media` | Datei von deinem Rechner ins Projekt holen (Videos werden bei Bedarf umgewandelt) |
 | `add_facecam` | Video als Facecam einfügen (Bild + Ton getrennt) |
 | `transcribe`, `job_status` | Transkript starten; fertig = automatisch im Projekt |
 | `get_transcript` | Wörter mit Zeiten, Schnitte, Vorschläge für Füllwörter und Pausen |
 | `apply_patch` | Jede Änderung, wird geprüft (bei Fehler: nichts gespeichert, klare Meldung) |
+| `add_captions` | Untertitel aus dem Transkript, passend zu Format und Stil |
+| `look` | Rendert Frames und zeigt sie der KI als Bilder, damit sie ihre Arbeit beurteilen und korrigieren kann |
 | `export_video` | MP4 oder GIF rendern, Link über `job_status` |
 | `editor_url` | Link zum Projekt im Editor |
 
@@ -156,6 +165,9 @@ Sag deiner KI zum Beispiel:
 | Weg A mit **Codex** | ⚠️ nur mit nachgebauter CLI getestet, nicht live |
 | Weg B mit **Claude Code** über HTTP | ✅ live getestet (Projekt anlegen, Facecam importieren und einfügen, Titel setzen) |
 | Live-Abgleich im Editor | ✅ im echten Browser getestet |
+| Regie-Ablauf mit `look` (Claude Code) | ✅ live getestet: das Showcase im README ist so entstanden, End-Bewertung 8–9 |
+| Selbstkritik im Editor-Chat (Claude Code) | ✅ live getestet; mit **Codex** nicht getestet (Codex bekommt die Frames per `--image`) |
+| Kie-MCP-Erkennung | ✅ mit Konfig-Dateien getestet; Kie-Guthaben mit echtem Key nicht getestet |
 | stdio-Brücke | ✅ Protokoll getestet; mit Codex und Hermes noch **nicht** live |
 | **Hermes** | ⚠️ nicht live getestet. Heißen die Felder in deiner Version anders, schau in die Hermes-Doku |
 

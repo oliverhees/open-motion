@@ -8,9 +8,13 @@
 
 **Das offene, selbst-hostbare Motion-Graphics-Studio, in dem jedes Element eine live editierbare Ebene ist.**
 
-[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20gr%C3%BCn-brightgreen.svg)](#-status)
+[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-71%20gr%C3%BCn-brightgreen.svg)](#-status)
 
 *Beschreib dein Video, sprich in die Facecam oder zieh Dateien rein. Die KI baut Ebenen, du feilst live nach, und am Ende kommt eine MP4 raus.*
+
+![Showcase: von Claude Code über den Open-Motion-MCP gebaut, unbearbeitet](docs/assets/showcase.gif)
+
+<sub>☝️ Von Claude Code über den MCP in einem Rutsch gebaut (Briefing → Stil „Kinetic" → Beat-Sheet → Bauen → eigene Frames angeschaut und korrigiert → Export). Nicht von Hand angefasst. [MP4](docs/assets/showcase.mp4)</sub>
 
 [Quickstart](#-quickstart) · [Features](#-features) · [Screenshots](#-screenshots) · [Architektur](#-architektur) · [Coolify-Deploy](docs/de/coolify.md) · [Handbuch](docs/de/handbuch.md) · [Lizenz](#-lizenz)
 
@@ -31,9 +35,12 @@ Dazu kommt, was ein Erklärvideo braucht: Facecam-Aufnahme im Browser, ein Trans
 | **Ein einzelnes Element ändern** | ❌ meist alles neu generieren | ✅ von Hand | ✅ klicken, tippen oder KI-Kommentar; nur dieses Element ändert sich |
 | **Inhalt tauschen, Rahmen bleibt** | ❌ | ⚠️ umständlich | ✅ Grafik → KI-Bild → Video; Position und Animation bleiben |
 | **Facecam + Transkript + Text-Schnitt** | ❌ | ⚠️ oft Zusatzsoftware | ✅ eingebaut; Grafiken hängen an Wörtern und wandern beim Schneiden mit |
-| **KI-Modell frei wählbar** | ❌ Modell des Anbieters | ❌ | ✅ eigene Keys: Claude, OpenAI, OpenRouter; Bilder über Kie.ai, OpenAI, OpenRouter, Gemini |
+| **KI schaut sich das Ergebnis an** | ❌ | ❌ | ✅ rendert Frames, bewertet sie, korrigiert, was nicht passt (bis 2 Runden) |
+| **KI-Modell frei wählbar** | ❌ Modell des Anbieters | ❌ | ✅ dein Claude-Code-/Codex-Abo oder eigene Keys: Claude, OpenAI, OpenRouter; Bilder über Kie.ai, OpenAI, OpenRouter, Gemini |
 | **Selbst hosten, Daten bleiben bei dir** | ❌ Cloud | ✅ lokal | ✅ Docker + Coolify, ein Ordner pro Projekt |
 | **Quellcode** | ❌ | ❌ meist | ✅ AGPL-3.0 |
+
+**Und „Claude Motion" oder Prompt-zu-Video-Skills?** Claude Motion (Anthropic, Beta für Team/Enterprise) und die beliebten Remotion-/HyperFrames-Skills machen aus einem Prompt Animations-Code und ein Video. Das funktioniert, und die besten Prompt-Anleitungen sagen alle dasselbe: Beats mit Zeiten, exakte Farben und Schriften, Sicherheitsbereiche, vor dem finalen Rendern Frames anschauen. Bei Open Motion stecken diese Regeln **schon im Master-Prompt** und in 14 Stilen, du musst also keinen 40-Zeilen-Prompt schreiben. Der Unterschied beginnt nach dem ersten Rendern: Hier bleibt jedes Element eine editierbare Ebene, Facecam und Transkript gehören zum Projekt, du schneidest im Text, und eine Ein-Wort-Korrektur ändert ein Element, statt den Clip neu zu generieren. Läuft auf deinem Rechner, Open Source.
 
 Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, ist keine neue Idee. Unser Beitrag ist alles, was fehlt, wenn man nur rendert: ein Ebenen-Modell, das KI **und** Mensch gleichzeitig bearbeiten können, ein Live-Editor ohne Neuladen, ein Facecam-Workflow mit Text-Schnitt und ein Rendering, das sich selbst an die Hardware anpasst.
 
@@ -43,6 +50,13 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 - **Live-Editor:** klicken, ziehen, skalieren, direkt in der Vorschau tippen. Wer am Abspielkopf etwas ändert, setzt automatisch einen Keyframe. Nur geänderte Ebenen werden neu gesetzt, ein Video lädt beim Verschieben nie neu.
 - **Szenen-Leiste und Tweaks:** Name, Länge und Tempo pro Szene, dazu alle Texte der Szene auf einen Blick.
 - **KI-Chat:** „Mach eine 20-Sekunden-Animation für mein Café" → Szenen, Texte, Grafiken, Bilder. Jede Antwort ist einzeln rückgängig zu machen.
+- **KI-Regisseur:** Master-Prompt mit Design-Gesetzen, Rezepten und Selbstcheck, dazu **14 Stile** (Keynote, Swiss, Kinetic, Neon, VHS, Editorial, Data, Doodle, …), jeder mit Schriften, Palette und Bewegungsregeln.
+- **Interview statt Prompt schreiben:** neues Projekt → kurzes Formular im Chat (Ziel, Publikum, Länge, Stil, Botschaft). Antworten per Klick, Tippen oder **Sprache** (lokales Whisper). Ist etwas unklar, fragt die KI mit einem Formular nach, nicht mit einer Textwand.
+- **Schaut sich die eigene Arbeit an:** nach größeren Umbauten bekommt die KI gerenderte Frames, bewertet Hook, Lesbarkeit, Layout und Bewegung und korrigiert alles unter 8.
+- **Formate:** 16:9, 9:16 (Reels/TikTok/Shorts mit Plattform-Sicherheitsbereichen), 1:1, 4:5.
+- **Motion-Engine:** Text pro Wort/Buchstabe/Zeile, Textmarker-Effekt, hochzählende Zahlen, sich selbst zeichnende Linien, Masken- und Iris-Blenden, 3D-Kippen, Unschärfe, Kamerafahrten, Glow/Schatten/Glas, Körnung/Vignette/Scanlines, Federn. Google Fonts werden automatisch geladen und lokal gespeichert (die Vorschau fragt nie bei Google an).
+- **Untertitel per Klick:** aus dem Transkript, passend zu Format und Stil, folgen deinen Schnitten.
+- **Kie AI:** Key in den Einstellungen mit Guthaben-Anzeige; ein Kie-MCP in Claude Code / Codex / Hermes wird erkannt.
 - **Kein API-Key nötig:** nutze dein **Claude-Code**- oder **Codex**-Abo. Oder lass **Claude Code, Codex oder Hermes** das ganze Video per **MCP** bauen, während du live im Editor zuschaust.
 - **Installer in einer Zeile** für Linux, macOS und Windows: Node, FFmpeg, Whisper, Start-Symbol, KI-Tools verbunden.
 - **Kommentare am Element:** Element anklicken, „@KI mach das grün" schreiben, fertig. Nur dieses Element ändert sich.
@@ -95,7 +109,7 @@ Danach auf **Open Motion** klicken (Windows: Desktop / Startmenü; macOS: `Open 
 
 **Im Editor** (ohne KI-Tool):
 
-1. Open Motion starten → **Neues Projekt**.
+1. Open Motion starten → **Neues Projekt** → Format (16:9, 9:16, …) und Stil wählen.
 2. Tab **Medien** → Aufnahme hochladen (oder auf die Bühne ziehen) → **Als Facecam** → Layout wählen.
 3. **Transkribieren** → **✂ Schnitt**: Füllwörter und Pausen mit **Alle anwenden** entfernen.
 4. **Grafiken aus Transkript** → Titel erscheinen an den passenden Wörtern.
@@ -174,7 +188,7 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, abgesichert durch 55 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
+**Beta 0.1, abgesichert durch 71 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
 
 - [x] Ebenen-Kern: Spec, Patches, Compiler, Render zu MP4/GIF (Bild für Bild geprüft)
 - [x] Live-Editor: ziehen, skalieren, tippen, Auto-Keyframes, Szenen, Kommentare
@@ -187,6 +201,9 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 - [x] Selbstanpassendes Rendering mit lernender Zeitschätzung
 - [x] KI ohne API-Key: Claude Code und Codex mit deinem Abo (Claude Code live getestet, Codex simuliert)
 - [x] MCP-Server für Claude Code, Codex, Hermes, mit Live-Abgleich im Editor (live mit Claude Code getestet)
+- [x] Stile, Master-Prompt, Interview-Formular, Spracheingabe, KI-Rückfragen, Selbstkritik mit Frames (live mit Claude Code getestet; das Showcase oben ist so entstanden)
+- [x] Motion-Engine 2, Formate 16:9 / 9:16 / 1:1 / 4:5, Untertitel per Klick (als MP4 exportiert und Bild für Bild geprüft)
+- [ ] Nicht live getestet: Codex und Hermes (nach deren Doku gebaut), Selbstkritik mit Codex, Kie AI mit echtem Key
 - [ ] Live-Test aller KI-, Bild- und Transkriptions-APIs mit echten Keys
 - [ ] Docker-Build in Coolify bestätigt
 - [ ] Skill für claude.ai, Claude Code, Cowork und Hermes

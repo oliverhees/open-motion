@@ -87,6 +87,15 @@ Modelle werden beim ersten Lauf nach `data/models/` geladen. Das Audio dekodiert
 
 **API-Keys:** ⚙ Einstellungen im Editor. Die Keys liegen in `data/settings.json` (Dateirechte 600) und werden nie an den Browser zurückgeschickt, er sieht nur „gesetzt …abcd".
 
+## 🎨 Neues Video: Format, Stil, Interview
+
+1. **Neues Video** → **Format** (16:9, 9:16, 1:1, 4:5) und **Stil** wählen (oder „Überrasch mich").
+2. Das Projekt öffnet mit einem gestylten Start und dem **Interview** im Chat: Ziel, Publikum, Länge, Botschaft, Stil. Klicken, tippen oder 🎙️ drücken und sprechen (lokales Whisper).
+3. **Bauen** → die KI schreibt die Szenen, schaut sich danach gerenderte Frames an und korrigiert alles unter 8 (abschaltbar unter ⚙ → „Qualitäts-Check").
+4. Ist etwas unklar, antwortet die KI mit einem kurzen Formular, statt zu raten.
+
+**Effekte, die du anfragen oder im Panel setzen kannst:** Text pro Wort/Buchstabe/Zeile, Textmarker auf einem Wort, hochzählende Zahlen, Linien, die sich selbst zeichnen, Masken- und Iris-Blenden, 3D-Kippen, Unschärfe, Kamerafahrten, Glow/Schatten/Glas, Körnung/Vignette/Scanlines, Untertitel aus dem Transkript (Tab „Medien").
+
 ## ✦ KI (Chat links, wie bei Motion)
 
 - **Chat:** „Mach eine 20-Sekunden-Animation für mein Café, 4 Szenen, warm und ruhig." Die KI baut die Szenen, Texte, gezeichneten Grafiken und Bilder.

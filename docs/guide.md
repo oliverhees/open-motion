@@ -28,6 +28,15 @@
 - **Anchors:** select a layer, switch on ⚓, click a word.
 - **Text-based cutting:** switch on ✂, click a word, shift-click to extend, press Delete. Click a struck-through word to restore it. Suggestions find filler words and pauses ≥ 0.7 s (shortened to 0.3 s).
 
+## 🎨 New video: format, style, interview
+
+1. **New video** → pick a **format** (16:9, 9:16, 1:1, 4:5) and a **style** (or "surprise me").
+2. The project opens with a styled starter and the **interview** in the chat: goal, audience, length, message, style. Click, type or press 🎙️ and speak (local Whisper).
+3. **Build** → the AI writes the scenes, then looks at rendered frames and fixes what scores below 8 (switch off under ⚙ → "Quality check").
+4. If something is unclear, the AI answers with a short form instead of guessing.
+
+**Effects you can ask for or set in the panel:** text by word/letter/line, highlighter on a word, counting numbers, lines that draw themselves, mask and iris reveals, 3D tilt, blur, camera moves, glow/shadow/glass, grain/vignette/scanlines, subtitles from the transcript (Media tab).
+
 ## ✦ AI
 
 - **Chat** on the left: describe a video or ask for changes. Changed layers flash; every answer has its own Undo.

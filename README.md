@@ -8,9 +8,13 @@
 
 **The open-source, self-hosted motion graphics studio where every element is a live-editable layer.**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20passing-brightgreen.svg)](#-status)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-71%20passing-brightgreen.svg)](#-status)
 
 *Describe your video, talk into your facecam or drop in files. The AI builds layers, you fine-tune them live, and out comes an MP4.*
+
+![Showcase: built by Claude Code through the Open Motion MCP, unedited](docs/assets/showcase.gif)
+
+<sub>☝️ Built by Claude Code through the MCP in one go (brief → style "kinetic" → beat sheet → build → it looked at its own frames and fixed them → export). Not touched by hand. [MP4](docs/assets/showcase.mp4)</sub>
 
 [Quickstart](#-quickstart) · [Features](#-features) · [Screenshots](#-screenshots) · [Architecture](#-architecture) · [Deploy with Coolify](docs/deploy-coolify.md) · [Guide](docs/guide.md) · [License](#-license)
 
@@ -31,9 +35,12 @@ On top of that you get what an explainer video needs: facecam recording in the b
 | **Change a single element** | ❌ usually regenerate everything | ✅ by hand | ✅ click, type or leave an AI comment; only that element changes |
 | **Swap content, keep the frame** | ❌ | ⚠️ tedious | ✅ graphic → AI image → video; position and animation stay |
 | **Facecam + transcript + text-based cutting** | ❌ | ⚠️ often extra software | ✅ built in; graphics hang on words and move when you cut |
-| **Choose your AI model** | ❌ vendor's model | ❌ | ✅ your own keys: Claude, OpenAI, OpenRouter; images via Kie.ai, OpenAI, OpenRouter, Gemini |
+| **AI looks at its own result** | ❌ | ❌ | ✅ renders frames, scores them, fixes what is off (up to 2 rounds) |
+| **Choose your AI model** | ❌ vendor's model | ❌ | ✅ your Claude Code / Codex subscription or your own keys: Claude, OpenAI, OpenRouter; images via Kie.ai, OpenAI, OpenRouter, Gemini |
 | **Self-hosted, your data stays with you** | ❌ cloud | ✅ local | ✅ Docker + Coolify, one folder per project |
 | **Source code** | ❌ | ❌ mostly | ✅ AGPL-3.0 |
+
+**And "Claude Motion" or prompt-to-video skills?** Claude Motion (Anthropic, beta for Team/Enterprise) and the popular Remotion/HyperFrames skills turn a prompt into animation code and a video. That works, and the best prompt guides all say the same: name timed beats, exact colors and fonts, safe areas, and look at frames before the final render. Open Motion has these rules **built into its master prompt** and its 14 styles, so you don't have to write a 40-line prompt. The difference starts after the first render: here every element stays an editable layer, your facecam and transcript are part of the project, you can cut in the text, and a one-word fix changes one element instead of regenerating the clip. Runs on your computer, open source.
 
 To be fair: describing animations as code and rendering them in a browser is not a new idea. What we add is everything that is missing when you only render: a layer model that AI **and** humans can edit at the same time, a live editor without reloads, a facecam workflow with text-based cutting, and rendering that tunes itself to your hardware.
 
@@ -43,6 +50,13 @@ To be fair: describing animations as code and rendering them in a browser is not
 - **Live editor:** click, drag, resize, type directly in the preview. Change something at the playhead and a keyframe is set automatically. Only changed layers are updated, so moving a video never reloads it.
 - **Scene strip & tweaks:** name, length and speed per scene, plus every text of the scene at a glance.
 - **AI chat:** "Make a 20-second animation for my café" → scenes, texts, graphics, images. Every answer can be undone on its own.
+- **AI director:** a master prompt with design laws, recipes and a self-check, plus **14 styles** (Keynote, Swiss, Kinetic, Neon, VHS, Editorial, Data, Doodle, …), each with fonts, palette and motion rules.
+- **Interview instead of prompt writing:** new project → a short form in the chat (goal, audience, length, style, message). Answer by click, typing or **voice** (local Whisper). If something is unclear, the AI asks back with a form, not a wall of text.
+- **Looks at its own work:** after a bigger build the AI gets rendered frames, scores hook, readability, layout and motion, and fixes what is below 8.
+- **Formats:** 16:9, 9:16 (Reels/TikTok/Shorts with platform safe areas), 1:1, 4:5.
+- **Motion engine:** text by word/letter/line, highlighter sweeps, counting numbers, self-drawing lines, mask and iris reveals, 3D tilt, blur, camera moves, glow/shadow/glass, grain/vignette/scanlines, springs. Google Fonts load automatically and are stored locally (no font requests to Google from the preview).
+- **Subtitles in one click:** from the transcript, matching format and style, follow your cuts.
+- **Kie AI:** key in the settings with a credit display; a Kie MCP in Claude Code / Codex / Hermes is detected.
 - **No API key needed:** use your **Claude Code** or **Codex** subscription. Or let **Claude Code, Codex or Hermes** build the whole video via **MCP** while you watch it live in the editor.
 - **One-line installer** for Linux, macOS and Windows: Node, FFmpeg, Whisper, start icon, AI tools connected.
 - **Comments on elements:** click an element, write "@AI make it green", done. Only that element changes.
@@ -95,7 +109,7 @@ Then click **Open Motion** in your apps (Windows: desktop / Start menu; macOS: `
 
 **In the editor** (no AI tool needed):
 
-1. Start Open Motion → **New project**.
+1. Start Open Motion → **New project** → pick format (16:9, 9:16, …) and a style.
 2. Tab **Media** → upload your recording (or drag it onto the stage) → **As facecam** → pick a layout.
 3. **Transcribe** → **✂ Cut**: remove filler words and pauses with **Apply all**.
 4. **Graphics from transcript** → titles appear at the matching words.
@@ -174,7 +188,7 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, backed by 55 automated tests and end-to-end runs in headless Chrome:**
+**Beta 0.1, backed by 71 automated tests and end-to-end runs in headless Chrome:**
 
 - [x] Layer core: spec, patches, compiler, render to MP4/GIF (checked frame by frame)
 - [x] Live editor: drag, resize, type, auto-keyframes, scenes, comments
@@ -187,6 +201,9 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 - [x] Self-tuning rendering with learning time estimates
 - [x] AI without API key: Claude Code and Codex with your subscription (Claude Code tested live, Codex simulated)
 - [x] MCP server for Claude Code, Codex, Hermes, with live update in the editor (tested live with Claude Code)
+- [x] Styles, master prompt, interview form, voice input, AI follow-up questions, self-review with frames (tested live with Claude Code; the showcase above was made this way)
+- [x] Motion engine 2, formats 16:9 / 9:16 / 1:1 / 4:5, one-click subtitles (exported to MP4 and checked frame by frame)
+- [ ] Not tested live: Codex and Hermes (built against their docs), the self-review with Codex, Kie AI with a real key
 - [ ] Live test of all AI, image and transcription APIs with real keys
 - [ ] Docker build confirmed on Coolify
 - [ ] Skill for claude.ai, Claude Code, Cowork and Hermes

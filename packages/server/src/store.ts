@@ -234,11 +234,18 @@ export function blankSpec(lang: "de" | "en" = "en", opts: { format?: Format; sty
   const st = getStyle(opts.style);
   const vertical = H > W;
   const m = Math.round(Math.min(W, H) * 0.08);
-  const big = Math.round(Math.min(W, H) * (vertical ? 0.11 : 0.12));
   const ph = { placeholder: true };
-  // Lines the headline needs: 2 in landscape, 3 in portrait (narrow column wraps "großartig" alone).
-  const lines = vertical ? 3 : 2;
-  const top = Math.round(H * (vertical ? 0.3 : 0.32));
+  // Narrow canvases (1:1, 4:5, 9:16) get three explicit lines, landscape two. The size is chosen so the
+  // longest line fits (≈ 0.75 em per character, or the style's displayWidth for very wide fonts), so it never wraps.
+  const narrow = W / H < 1.2;
+  const dw = st?.fonts.displayWidth ?? 0.75;
+  const first = vertical && dw > 0.7 ? (de ? "Dein\nVideo," : "Your\nvideo,") : de ? "Dein Video," : "Your video,"; // very wide font in portrait: 4 lines
+  const text = de ? (narrow ? `${first}\n[[großartig]]\nerzählt.` : `${first}\n[[großartig]] erzählt.`) : (narrow ? `${first}\n[[beautifully]]\ntold.` : `${first}\n[[beautifully]] told.`);
+  const lines = text.split("\n").length;
+  const longest = Math.max(...text.replace(/\[\[|\]\]/g, "").split("\n").map((l) => l.length));
+  const big = Math.min(Math.round(Math.min(W, H) * 0.15), Math.floor((W - 2 * m) / (longest * dw)));
+  const body = Math.max(Math.round(big * 0.32), vertical ? 44 : narrow ? 36 : 40);
+  const top = Math.round(H * (vertical ? 0.3 : narrow ? 0.26 : 0.32));
   const spec: MotionSpec = {
     version: 1,
     meta: { title: de ? "Neues Projekt" : "New project", lang, ...(st ? { style: st.id } : {}) },
@@ -255,15 +262,15 @@ export function blankSpec(lang: "de" | "en" = "en", opts: { format?: Format; sty
       {
         id: "title", name: de ? "Titel" : "Title", type: "text", scene: "s1", track: 5, start: 0.3, duration: 4.5, meta: ph,
         frame: { x: m, y: top, w: W - 2 * m, h: Math.round(big * 1.05 * lines + big * 0.3) },
-        text: de ? "Dein Video,\n[[großartig]] erzählt." : "Your video,\n[[beautifully]] told.",
+        text,
         style: { fontSize: big, fontWeight: st?.fonts.displayWeight ?? 800, color: "$ink", lineHeight: 1.02, letterSpacing: Math.round(-big * 0.03), highlight: "$accent", ...(st ? { fontFamily: st.fonts.display } : {}) },
         anim: { type: "mask", by: "word", stagger: 0.08, duration: 0.8, ease: "expo.out" }, out: { type: "fade", duration: 0.4 },
       },
       {
         id: "sub", name: de ? "Untertitel" : "Subtitle", type: "text", scene: "s1", track: 5, start: 1.1, duration: 3.7, meta: ph,
-        frame: { x: m, y: Math.round(top + big * 1.05 * lines + big * 0.6), w: W - 2 * m, h: Math.round(big * (vertical ? 1.1 : 0.6)) },
+        frame: { x: m, y: Math.round(top + big * 1.05 * lines + big * 0.6), w: W - 2 * m, h: Math.round(body * 1.3 * 2) },
         text: de ? "Schreib links in den Chat, was du willst." : "Tell the chat on the left what you want.",
-        style: { fontSize: Math.round(big * 0.32), fontWeight: st?.fonts.bodyWeight ?? 400, color: "$muted", ...(st ? { fontFamily: st.fonts.body } : {}) },
+        style: { fontSize: body, fontWeight: st?.fonts.bodyWeight ?? 400, color: "$muted", ...(st ? { fontFamily: st.fonts.body } : {}) },
         in: { type: "fade", duration: 0.8 }, out: { type: "fade", duration: 0.4 },
       },
     ],

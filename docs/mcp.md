@@ -117,20 +117,29 @@ If your Hermes version supports MCP over HTTP, `url: "http://localhost:4317/mcp"
 
 > Use Open Motion. Create the project "AI tools explained". Import `/home/me/Videos/facecam.mp4` as facecam in the "corner" layout. Transcribe in English. Cut filler words and long pauses. Add a short title for every key statement, anchored to the matching word. Then give me the editor link.
 
+**Or as a motion designer, from scratch:**
+
+> Use Open Motion. Make a 20-second 9:16 reel about our new café opening. Interview me first, suggest 3 directions, then build it. Look at your frames and fix everything below 8/10, then export 1080p.
+
+The AI follows a director workflow built into the MCP: brief → three directions → style and format → beat sheet → build → **look at its own frames** (`look`) and fix → export.
+
 Open the link. **Every change the AI makes shows up live in the editor within about 2 seconds**, with the notice "Updated from outside".
 
 ### 🔧 Tools
 
 | Tool | What it does |
 | --- | --- |
-| `list_projects`, `create_project` | See and create projects |
+| `list_projects`, `create_project` | See and create projects (with format 16:9 / 9:16 / 1:1 / 4:5 and a style) |
+| `list_styles` | The 14 styles with fonts, palette and motion rules |
 | `get_project`, `get_spec` | Overview or the full Motion-Spec |
-| `spec_reference` | Rules, layer types, all patch operations |
+| `spec_reference` | The master prompt: design laws, engine reference (text animation, masks, counters, drawing, 3D, camera, textures), recipes, self-check |
 | `import_media` | Copy a file from your computer into the project (videos are converted if needed) |
 | `add_facecam` | Add a video as facecam (picture and sound separate) |
 | `transcribe`, `job_status` | Start a transcript; when done it is saved into the project |
 | `get_transcript` | Words with times, cuts, suggestions for filler words and pauses |
 | `apply_patch` | Any change, validated (on error nothing is saved and the message says why) |
+| `add_captions` | Subtitles from the transcript, matching format and style |
+| `look` | Renders frames and shows them to the AI as images, so it can judge and fix its own work |
 | `export_video` | Render MP4 or GIF, link via `job_status` |
 | `editor_url` | Link to the project in the editor |
 
@@ -154,6 +163,9 @@ Open the link. **Every change the AI makes shows up live in the editor within ab
 | Way A with **Codex** | ⚠️ tested with a simulated CLI only, not live |
 | Way B with **Claude Code** over HTTP | ✅ tested live (create project, import and add facecam, add title) |
 | Live update in the editor | ✅ tested in a real browser |
+| Director workflow with `look` (Claude Code) | ✅ tested live: the README showcase was built this way, final scores 8–9 |
+| Self-review in the editor chat (Claude Code) | ✅ tested live; with **Codex** not tested (Codex gets the frames via `--image`) |
+| Kie MCP detection | ✅ tested with config files; Kie credits with a real key not tested |
 | stdio bridge | ✅ protocol tested; **not** yet live with Codex or Hermes |
 | **Hermes** | ⚠️ not tested live. If the field names differ in your version, check the Hermes docs |
 
