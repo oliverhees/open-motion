@@ -8,7 +8,8 @@ import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "nod
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 
-export type JobType = "export" | "transcribe";
+/** dictate: short voice input for chat/interview, always taken before exports. */
+export type JobType = "export" | "transcribe" | "dictate";
 export interface QueueJob<P = any, R = any> {
   id: string;
   type: JobType;

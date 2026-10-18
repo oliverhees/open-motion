@@ -4,7 +4,7 @@
 import os from "node:os";
 import path from "node:path";
 import { statSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import { renderVideo, detectHardware, type RenderOptions } from "@openmotion/render";
 import type { MotionSpec } from "@openmotion/core";
 import { FileQueue, type QueueJob } from "./queue.ts";
@@ -36,7 +36,8 @@ export async function runWorker(dataDir: string, signal?: AbortSignal) {
 
   try {
     while (!signal?.aborted) {
-      const job = await queue.claim(["export", "transcribe"], id).catch(() => undefined);
+      // Voice input first: the user is waiting for it while typing.
+      const job = (await queue.claim(["dictate"], id).catch(() => undefined)) ?? (await queue.claim(["export", "transcribe"], id).catch(() => undefined));
       if (!job) {
         await new Promise((r) => setTimeout(r, 1000));
         continue;
@@ -44,7 +45,9 @@ export async function runWorker(dataDir: string, signal?: AbortSignal) {
       busy = job.id;
       void beat();
       try {
-        const result = job.type === "export" ? await doExport(job, dataDir, statsFile, queue) : await doTranscribe(job, dataDir, await settings.read());
+        const result = job.type === "export" ? await doExport(job, dataDir, statsFile, queue)
+          : job.type === "dictate" ? await doDictate(job, dataDir, await settings.read())
+          : await doTranscribe(job, dataDir, await settings.read());
         await queue.update(job.id, { status: "done", finishedAt: Date.now(), result, ...(job.type === "export" ? (result as object) : {}) });
       } catch (e) {
         await queue.update(job.id, { status: "error", finishedAt: Date.now(), error: (e as Error).message.slice(0, 2000) });
@@ -75,4 +78,14 @@ async function doTranscribe(job: QueueJob<{ projectId: string; source: string; p
   if (!file.startsWith(path.join(dir, "assets") + path.sep)) throw new Error("source muss unter assets/ liegen");
   const r = await transcribe(file, s, { provider: p.provider, language: p.language, model: p.model, modelsDir: path.resolve(dataDir, "models") });
   return { source: p.source, language: r.language, provider: `${r.provider}:${r.model}`, words: withIds(r.words) };
+}
+
+async function doDictate(job: QueueJob<{ file: string; language?: string }>, dataDir: string, s: Awaited<ReturnType<SettingsStore["read"]>>) {
+  const file = path.resolve(dataDir, "tmp", path.basename(job.payload.file));
+  try {
+    const r = await transcribe(file, s, { language: job.payload.language, modelsDir: path.resolve(dataDir, "models") });
+    return { text: r.words.map((w) => w.text).join(" ").replace(/\s+([.,!?;:])/g, "$1").trim() };
+  } finally {
+    await rm(file, { force: true });
+  }
 }

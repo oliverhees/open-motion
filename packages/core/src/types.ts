@@ -158,7 +158,8 @@ export interface TextStyle {
   italic?: boolean;
   color?: string;
   align?: "left" | "center" | "right";
-  valign?: "top" | "middle" | "bottom";
+  /** "center" is accepted as "middle". */
+  valign?: "top" | "middle" | "center" | "bottom";
   lineHeight?: number;
   letterSpacing?: number;
   uppercase?: boolean;

@@ -3,13 +3,14 @@ import { httpFetch } from "../http.ts";
 // that the core validates. Invalid answers go back to the model with the exact error (max 2 retries).
 // Image wishes come as  src: "ai:<prompt>"  and are generated only after the patch is valid.
 
-import { applyPatch, describe, isWordCut, sceneTimings, sourceToComp, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { applyPatch, compositionDuration, describe, isWordCut, sceneTimings, sourceToComp, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
 import type { Settings } from "../settings.ts";
 import { complete, extractJson, type Fetch, type Msg } from "./llm.ts";
 import type { AiProgress } from "./cli.ts";
 import { ensureFonts } from "../fonts.ts";
 import { systemPrompt } from "./guide.ts";
 import { aspectFor, generateImage } from "./images.ts";
+import { renderFrames } from "../frames.ts";
 
 export type AgentKind = "chat" | "comment" | "transcript";
 
@@ -27,7 +28,7 @@ export interface AgentRequest {
 }
 
 /** missingFonts: families Google Fonts does not know; the text falls back to the system font. */
-export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number; missingFonts?: string[]; ask?: AskQuestion[] }
+export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number; missingFonts?: string[]; ask?: AskQuestion[]; review?: { scores: Record<string, number>; fixes: number } }
 
 /** A question the AI asks back; the editor shows it as a form. */
 export interface AskQuestion { id: string; q: string; options: string[]; multi?: boolean; free?: boolean }
@@ -66,22 +67,104 @@ export async function runAgent(req: AgentRequest, ctx: { settings: Settings; pro
       const ops = out.ops as PatchOp[];
       const check = applyPatch(req.spec, ops);
       const images = await resolveImages(ops, req.spec, ctx, f, progress);
-      // Fonts the AI picked are downloaded now and registered with one more op.
-      let missingFonts: string[] = [];
-      if (process.env.OPENMOTION_FAKE_AI !== "1" && process.env.OPENMOTION_NO_FONT_DOWNLOAD !== "1") {
-        const fonts = await ensureFonts(check.spec, ctx.projectDir, f).catch(() => null);
-        if (fonts?.op) ops.push(fonts.op);
-        missingFonts = fonts?.missing ?? [];
+      const missingFonts = await withFonts(ops, req.spec, ctx, f);
+      const result: AgentResult = { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt, missingFonts };
+      if (shouldReview(req, ctx.settings, ops)) {
+        convo.push({ role: "assistant", content: text.slice(0, 40000) });
+        await review(req, ctx, f, progress, system, convo, result).catch(() => {});
       }
-      return { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt, missingFonts };
+      return result;
     } catch (e) {
       lastError = (e as Error).message;
+      if (process.env.OPENMOTION_DEBUG === "1") console.error(`[agent] attempt ${attempt} rejected: ${lastError.slice(0, 1200)}`);
       if (/API-Key|antwortet mit|Kie\.ai|Gemini|OpenRouter: |Bild/.test(lastError) && !/Patch op|Invalid Motion-Spec|JSON/.test(lastError)) throw e;
       convo.push({ role: "assistant", content: text.slice(0, 20000) });
       convo.push({ role: "user", content: `Deine Antwort war ungültig:\n${lastError.slice(0, 3000)}\n\nKorrigiere sie. Antworte wieder nur mit dem JSON-Objekt {"message": …, "ops": […]}.` });
     }
   }
   throw new Error(`Die KI hat nach 3 Versuchen keine gültige Änderung geliefert. Letzter Fehler: ${lastError.slice(0, 600)}`);
+}
+
+/** Fonts the AI picked are downloaded and registered with one more op. Returns families Google does not know. */
+async function withFonts(ops: PatchOp[], base: MotionSpec, ctx: { projectDir: string }, f: Fetch): Promise<string[]> {
+  if (process.env.OPENMOTION_FAKE_AI === "1" || process.env.OPENMOTION_NO_FONT_DOWNLOAD === "1") return [];
+  const fonts = await ensureFonts(applyPatch(base, ops).spec, ctx.projectDir, f).catch(() => null);
+  if (fonts?.op) ops.push(fonts.op);
+  return fonts?.missing ?? [];
+}
+
+/** Bigger builds get a look-and-fix pass (can be switched off in the settings). */
+function shouldReview(req: AgentRequest, settings: Settings, ops: PatchOp[]): boolean {
+  if (process.env.OPENMOTION_FAKE_AI === "1" || settings.ai.review === false) return false;
+  if (req.kind === "comment") return false;
+  return ops.filter((o) => o.op === "add" || o.op === "replace" || o.op === "swap").length >= 4;
+}
+
+/** Moments worth judging: the hook, then each scene once its entrances are done. */
+export function reviewTimes(spec: MotionSpec): number[] {
+  const d = compositionDuration(spec);
+  const scenes = sceneTimings(spec);
+  const ts = [Math.min(0.9, d * 0.1)];
+  if (spec.scenes.length) {
+    for (const s of spec.scenes.slice(0, 7)) {
+      const t = scenes.get(s.id)!;
+      ts.push(t.start + Math.min((t.end - t.start) * 0.6, 1.8));
+    }
+  } else for (let i = 1; i <= 5; i++) ts.push((d * i) / 6);
+  return [...new Set(ts.map((t) => Math.round(Math.min(Math.max(t, 0), d - 0.05) * 100) / 100))].slice(0, 8);
+}
+
+/**
+ * Look-and-fix: renders frames of the result, shows them to the model as images and asks for a harsh
+ * scored review plus fix ops on top. Adds the fixes to `result`. Silent no-op if anything is missing
+ * (no Chrome, model without image input, invalid fix): the first result still stands.
+ */
+const REVIEW_ROUNDS = 2;
+const avg = (sc: Record<string, number>) => { const v = Object.values(sc).filter((x) => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 10; };
+
+async function review(req: AgentRequest, ctx: { settings: Settings; projectDir: string }, f: Fetch, progress: (p: AiProgress) => void, system: string, convo: Msg[], result: AgentResult) {
+  const lang = req.lang === "en" ? "English" : "German";
+  let fixes = 0;
+  for (let round = 1; round <= REVIEW_ROUNDS; round++) {
+    progress({ phase: "review", n: round });
+    const built = applyPatch(req.spec, result.ops).spec;
+    const shots = await renderFrames(built, ctx.projectDir, reviewTimes(built), 0.5);
+    convo.push({
+      role: "user",
+      content: `REVIEW${round > 1 ? ` (round ${round}: after your fixes)` : ""}. These are frames of the video you just built, at t = ${shots.map((s) => `${s.t}s`).join(", ")} (shown half size).
+Be a harsh motion director, not a proud author. Look at every frame and score 1–10: hook (0–1 s), readability at phone size, hierarchy & composition (focal points, depth, use of space, no empty half-frames), spacing (overlaps, cut-off or clipped text, safe area), typography, color & polish (style fidelity), pace & variety.
+List what you actually SEE that is wrong. Then fix the worst problems with ops applied ON TOP of your previous ops (same ids; "set"/"replace"/"remove"/"add").
+The user has NOT seen any earlier version: the message describes the finished video only (never mention a review, fixes or changes).
+Answer only with JSON: {"message": "final reply to the user in ${lang} (2–5 sentences: what is in the video, with times like 0:05, and the idea behind it)", "scores": {"hook":0,"readability":0,"composition":0,"spacing":0,"typography":0,"polish":0,"pace":0}, "ops": [ … ]}. If every score is ≥ 8, "ops": [].`,
+      images: shots.map((s) => s.png),
+    });
+    let done = false;
+    for (let attempt = 1; attempt <= 2 && !done; attempt++) {
+      const text = await complete(ctx.settings, system, convo, f, 8000, (p) => progress(p.phase === "writing" ? { ...p, phase: "review", n: round } : p));
+      try {
+        const out = extractJson(text) as { message?: unknown; ops?: unknown; scores?: Record<string, number> };
+        const fix = Array.isArray(out.ops) ? (out.ops as PatchOp[]) : [];
+        const check = applyPatch(built, fix);
+        if (fix.length) {
+          result.images.push(...(await resolveImages(fix, built, ctx, f, progress)));
+          result.missingFonts = [...(result.missingFonts ?? []), ...(await withFonts(fix, built, ctx, f))];
+          result.ops.push(...fix);
+          result.changed = [...new Set([...result.changed, ...check.changed])];
+          fixes += fix.length;
+        }
+        if (typeof out.message === "string" && out.message.trim()) result.message = out.message;
+        if (out.scores && typeof out.scores === "object") result.review = { scores: out.scores, fixes };
+        convo.push({ role: "assistant", content: text.slice(0, 20000) });
+        done = true;
+        // Good enough, or nothing left to fix: stop. Otherwise look once more at the fixed version.
+        if (!fix.length || avg(out.scores ?? {}) >= 7.5) return;
+      } catch (e) {
+        convo.push({ role: "assistant", content: text.slice(0, 20000) });
+        convo.push({ role: "user", content: `Invalid: ${(e as Error).message.slice(0, 2000)}\nAnswer again with the JSON only; fix ops must apply on top of your previous ops.` });
+      }
+    }
+    if (!done) return;
+  }
 }
 
 /** Replaces every "ai:<prompt>" src with a generated, locally saved image. */

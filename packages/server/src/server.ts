@@ -4,6 +4,8 @@
 
 import http from "node:http";
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { Store, HttpError, type Comment } from "./store.ts";
 import { sanitize, type ExportRequest } from "./jobs.ts";
@@ -19,7 +21,7 @@ import { FileQueue, type QueueJob } from "./queue.ts";
 import { workerFile, type WorkerInfo } from "./worker.ts";
 import { detectHardware, estimate, readStats } from "@openmotion/render";
 import { applyPatch, FORMATS, getStyle, type Format, type MotionSpec } from "@openmotion/core";
-import { ensureFonts, missingFamilies } from "./fonts.ts";
+import { ensureFonts, missingFamilies, previewFont } from "./fonts.ts";
 
 export interface ServerOptions {
   dataDir: string;
@@ -142,6 +144,30 @@ export function createServer(opts: ServerOptions) {
               : { area: "System", name: "Render-Worker", ok: false, ms: 0, detail: "noch nie gestartet", hint: "Worker-Dienst starten (OPENMOTION_ROLE=worker) oder lokal mit OPENMOTION_ROLE=all." });
             return { checks, report: formatReport(checks, s) };
           }));
+        }
+        if (parts[1] === "fontfile" && parts[2] && m === "GET") {
+          const file = await previewFont(parts[2], path.resolve(opts.dataDir, "fontcache"));
+          if (!file) throw new HttpError(404, "font not found");
+          res.setHeader("cache-control", "public, max-age=31536000, immutable");
+          return sendFile(req, res, file, false);
+        }
+        if (parts[1] === "dictate" && m === "POST") {
+          // Voice input (chat, interview): raw audio body → text, through the transcription queue.
+          const dir = path.resolve(opts.dataDir, "tmp");
+          await mkdir(dir, { recursive: true });
+          const file = path.join(dir, `dictate-${randomBytes(5).toString("hex")}.${/ogg/.test(String(req.headers["content-type"])) ? "ogg" : /mp4|m4a/.test(String(req.headers["content-type"])) ? "m4a" : "webm"}`);
+          let size = 0;
+          const chunks: Buffer[] = [];
+          for await (const c of req) {
+            size += (c as Buffer).length;
+            if (size > 25 * 1024 * 1024) throw new HttpError(413, "Aufnahme zu lang (max. 25 MB).");
+            chunks.push(c as Buffer);
+          }
+          if (!size) throw new HttpError(400, "leere Aufnahme");
+          await writeFile(file, Buffer.concat(chunks));
+          const lang = url.searchParams.get("lang") ?? undefined;
+          const job = await queue.enqueue("dictate", { file: path.basename(file), language: lang && /^[a-z]{2}$/.test(lang) ? lang : undefined });
+          return json(res, 202, view(job));
         }
         if (parts[1] === "tasks" && parts[2] && m === "GET") {
           const task = tasks.get(parts[2]) ?? (/^[a-f0-9]{10}$/.test(parts[2]) ? await queue.get(parts[2]) : undefined);

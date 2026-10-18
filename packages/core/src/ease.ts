@@ -64,6 +64,9 @@ export const DEFAULT_EASE: Ease = "power2.inOut";
 export function getEase(name: Ease = DEFAULT_EASE): EaseFn {
   const n = name.trim();
   if (n === "linear" || n === "none") return (p) => p;
+  // CSS names, so a model's habits do not fail validation.
+  const css: Record<string, string> = { ease: "power1.inOut", "ease-in": "power2.in", "ease-out": "power2.out", "ease-in-out": "power2.inOut", easeIn: "power2.in", easeOut: "power2.out", easeInOut: "power2.inOut" };
+  if (n in css) return getEase(css[n]);
   if (n === "spring") return spring(1, 9);
   if (n === "spring.soft") return spring(0.7, 10); // peaks ~4.7 % over, settles by the end
   const st = /^steps\((\d{1,3})\)$/.exec(n);

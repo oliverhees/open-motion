@@ -1,7 +1,8 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { applyPatch, compositionDuration, facecamLayers, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { applyPatch, compositionDuration, facecamLayers, getStyle, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
 import { api, fmtTime, type AgentResult, type AiProgress, type Asset, type ChatEntry, type Comment, type ProjectInfo, type Provider, type PublicSettings, type TranscriptResult } from "./api.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
+import { Interview, type Brief } from "./Interview.tsx";
 import type { SttState, Upload } from "./MediaTab.tsx";
 import { RecordDialog } from "./RecordDialog.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
@@ -40,6 +41,7 @@ export function Editor({ id }: { id: string }) {
   const [showSettings, setShowSettings] = useState(false);
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const [chatOpen, setChatOpen] = useState(true);
+  const [showInterview, setShowInterview] = useState(false);
   const [aiBusy, setAiBusy] = useState<{ label: string; started: number; progress?: AiProgress } | null>(null);
   const { lang } = useContext(LangContext);
   const [flash, setFlash] = useState<string[]>([]);
@@ -71,7 +73,11 @@ export function Editor({ id }: { id: string }) {
     api.assets(id).then(setAssets).catch(() => setAssets([]));
     api.capabilities().then(setCaps).catch(() => setCaps(null));
     api.settings().then(setSettings).catch(() => setSettings(null));
-    api.chat(id).then(setChat).catch(() => setChat([]));
+    // A fresh project (only starter layers, empty chat) opens with the interview.
+    Promise.all([api.chat(id).catch(() => [] as ChatEntry[]), api.read(id).catch(() => null)]).then(([c, r]) => {
+      setChat(c);
+      if (!c.length && r?.spec.layers.some((l) => l.meta?.placeholder)) setShowInterview(true);
+    });
   }, [id]);
 
   // Autosave, debounced. Never while dragging.
@@ -369,7 +375,10 @@ export function Editor({ id }: { id: string }) {
   const applyAi = (res: AgentResult): string | null => {
     const before = specRef.current!;
     if (res.ops.length && !apply(res.ops)) return null;
-    const entryId = addChat({ role: "assistant", text: res.message, ops: res.ops.length, images: res.images, changed: res.changed });
+    const scores = Object.values(res.review?.scores ?? {}).filter((v) => typeof v === "number");
+    const review = res.review && scores.length ? { score: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10, fixes: res.review.fixes } : undefined;
+    const entryId = addChat({ role: "assistant", text: res.message, ops: res.ops.length, images: res.images, changed: res.changed, ...(res.ask ? { ask: res.ask } : {}), ...(review ? { review } : {}) });
+    if (res.missingFonts?.length) setToast(t_("fontMissing", { f: res.missingFonts.join(", ") }));
     if (res.ops.length) {
       snaps.current.set(entryId, { before, after: specRef.current! });
       setFlash(res.changed);
@@ -395,6 +404,28 @@ export function Editor({ id }: { id: string }) {
       } catch { /* anchor without transcript */ }
     }
     if (best !== null) setTimeout(() => seek(best!), 50);
+  };
+
+  /** Interview done: remember style + brief in the project (the AI keeps honoring them), show the palette now, build. */
+  const submitBrief = async (b: Brief) => {
+    setShowInterview(false);
+    const st = getStyle(b.style);
+    const ops: PatchOp[] = [{ op: "meta", set: { brief: b.text, ...(st ? { style: st.id } : {}) } }];
+    if (st) {
+      ops.push({ op: "style", set: { ...(specRef.current?.style ?? {}), palette: { ...st.palette } } });
+      ops.push({ op: "canvas", set: { background: "$bg", texture: st.texture } });
+    }
+    apply(ops);
+    await sendChat(`${b.text}\n\n${t_("ivBuildNow")}`);
+  };
+
+  const answerAsk = async (entryId: string, text: string) => {
+    setChat((c) => {
+      const next = c.map((e) => (e.id === entryId ? { ...e, answered: true } : e));
+      api.saveChat(id, next).catch(() => {});
+      return next;
+    });
+    await sendChat(text);
   };
 
   const sendChat = async (text: string) => {
@@ -525,7 +556,12 @@ export function Editor({ id }: { id: string }) {
           hasTranscript={!!spec.transcript?.words.length}
           model={settings ? `${t_(`p_${settings.ai.provider}` as "p_anthropic")} · ${settings.ai.model || ""}`.replace(/ · $/, "") : ""}
           canUndo={(eid) => snaps.current.has(eid)} onSend={(txt) => void sendChat(txt)} onTranscript={() => void fromTranscript()}
-          onComments={() => void workComments()} onUndo={undoAi} onClose={() => setChatOpen(false)} />
+          onComments={() => void workComments()} onUndo={undoAi} onClose={() => setChatOpen(false)}
+          onOpenInterview={() => setShowInterview(true)} onAnswer={(eid, txt) => void answerAsk(eid, txt)}
+          interview={showInterview ? (
+            <Interview hasRecording={spec.layers.some((l) => l.type === "video" && l.source?.kind === "recording") || !!spec.transcript?.words.length}
+              currentStyle={spec.meta.style} onClose={() => setShowInterview(false)} onSubmit={(b) => void submitBrief(b)} />
+          ) : null} />
       )}
 
       <Stage spec={spec} t={t} flash={flash} selected={selected} mode={mode} editingId={editingId} comments={comments}

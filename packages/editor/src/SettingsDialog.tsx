@@ -47,7 +47,7 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
     setError(null);
     try {
       const filled = { ...Object.fromEntries(Object.entries(keys).filter(([, v]) => v.trim())), ...extra };
-      const r = await api.saveSettings({ transcription: s.transcription, ai: { provider: s.ai.provider, model: s.ai.model ?? "" }, images: { provider: s.images.provider, model: s.images.model ?? "" }, keys: filled });
+      const r = await api.saveSettings({ transcription: s.transcription, ai: { provider: s.ai.provider, model: s.ai.model ?? "", review: s.ai.review !== false }, images: { provider: s.images.provider, model: s.images.model ?? "" }, keys: filled });
       setS(r);
       setKeys({});
       onSaved(r);
@@ -73,6 +73,10 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
             <input value={s.ai.model ?? ""} placeholder={LLM_DEFAULTS[s.ai.provider]} onChange={(e) => setS({ ...s, ai: { ...s.ai, model: e.target.value } })} aria-label={t_("model")} />
           </div>
           {CLI_LLMS.includes(s.ai.provider) && <p className="muted" style={{ margin: "4px 0 0" }}>{t_("cliNote")}</p>}
+          <label className="check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
+            <input type="checkbox" style={{ width: "auto", marginTop: 2 }} checked={s.ai.review !== false} onChange={(e) => setS({ ...s, ai: { ...s.ai, review: e.target.checked } })} />
+            <span>{t_("reviewSetting")}</span>
+          </label>
           <h3>{t_("imageModel")}</h3>
           <div className="pair">
             <select value={s.images.provider} onChange={(e) => setS({ ...s, images: { ...s.images, provider: e.target.value as ImageProvider, model: "" } })}>

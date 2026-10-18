@@ -4,7 +4,8 @@ import { httpFetch } from "../http.ts";
 import { DEFAULT_LLM_MODELS, type LlmProvider, type Settings } from "../settings.ts";
 import { CLI_LABEL, completeCli, isCliProvider, type AiProgress } from "./cli.ts";
 
-export interface Msg { role: "user" | "assistant"; content: string }
+/** images: PNG frames attached to this message (look-and-fix review). */
+export interface Msg { role: "user" | "assistant"; content: string; images?: Buffer[] }
 export type Fetch = typeof fetch;
 
 const LABEL: Record<LlmProvider, string> = { anthropic: "Anthropic (Claude)", openai: "OpenAI", openrouter: "OpenRouter", ...CLI_LABEL };
@@ -18,7 +19,12 @@ export async function complete(settings: Settings, system: string, messages: Msg
   if (provider === "anthropic") {
     const j = await call(f, "https://api.anthropic.com/v1/messages", {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: { model, max_tokens: maxTokens, system, messages },
+      body: {
+        model, max_tokens: maxTokens, system,
+        messages: messages.map((m) => (m.images?.length
+          ? { role: m.role, content: [{ type: "text", text: m.content }, ...m.images.map((png) => ({ type: "image", source: { type: "base64", media_type: "image/png", data: png.toString("base64") } }))] }
+          : { role: m.role, content: m.content })),
+      },
     }, provider) as { content?: { type: string; text?: string }[] };
     return (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("");
   }
@@ -27,7 +33,12 @@ export async function complete(settings: Settings, system: string, messages: Msg
   if (provider === "openrouter") Object.assign(headers, { "HTTP-Referer": "https://github.com/openmotion", "X-Title": "OpenMotion" });
   const j = await call(f, url, {
     headers,
-    body: { model, messages: [{ role: "system", content: system }, ...messages], response_format: { type: "json_object" }, ...(provider === "openai" ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }) },
+    body: {
+      model,
+      messages: [{ role: "system", content: system }, ...messages.map((m) => (m.images?.length
+        ? { role: m.role, content: [{ type: "text", text: m.content }, ...m.images.map((png) => ({ type: "image_url", image_url: { url: `data:image/png;base64,${png.toString("base64")}` } }))] }
+        : { role: m.role, content: m.content }))],
+      response_format: { type: "json_object" }, ...(provider === "openai" ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }) },
   }, provider) as { choices?: { message?: { content?: string } }[] };
   return j.choices?.[0]?.message?.content ?? "";
 }

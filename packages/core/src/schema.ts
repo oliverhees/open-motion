@@ -97,7 +97,7 @@ const textStyle = z
     italic: z.boolean().optional(),
     color: color.optional(),
     align: z.enum(["left", "center", "right"]).optional(),
-    valign: z.enum(["top", "middle", "bottom"]).optional(),
+    valign: z.enum(["top", "middle", "center", "bottom"]).optional(),
     lineHeight: pos.optional(),
     letterSpacing: num.optional(),
     uppercase: z.boolean().optional(),

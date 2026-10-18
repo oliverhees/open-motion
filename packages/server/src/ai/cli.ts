@@ -6,7 +6,7 @@
 // or read-only: the CLI only writes the JSON answer, the core checks it like any other answer.
 
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,10 +23,10 @@ const TIMEOUT_MS = 10 * 60_000;
 export const isCliProvider = (p: string): p is CliProvider => (CLI_PROVIDERS as readonly string[]).includes(p);
 export const cliBin = (p: CliProvider) => process.env[BIN[p].env] || BIN[p].name;
 
-export interface CliMsg { role: "user" | "assistant"; content: string }
+export interface CliMsg { role: "user" | "assistant"; content: string; images?: Buffer[] }
 
 /** Live state of the AI, shown in the editor chat while it works (translated there). */
-export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image"; text?: string; ops?: number; n?: number; of?: number }
+export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image" | "review"; text?: string; ops?: number; n?: number; of?: number }
 
 /** One answer from the CLI. History is flattened into one prompt, because the CLIs run one turn at a time. */
 export async function completeCli(provider: CliProvider, model: string | undefined, system: string, messages: CliMsg[], onProgress?: (p: AiProgress) => void): Promise<string> {
@@ -35,7 +35,10 @@ export async function completeCli(provider: CliProvider, model: string | undefin
   try {
     if (provider === "claude-code") {
       // stream-json: the answer arrives piece by piece, so the editor can show it live like the terminal.
+      const images = messages.flatMap((m) => m.images ?? []);
       const args = ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", system];
+      // With images the prompt goes in as one stream-json user message (text + image blocks).
+      if (images.length) args.push("--input-format", "stream-json");
       if (model) args.push("--model", model);
       // Without this the CLI would bill an API key from the environment instead of the subscription.
       const env = { ...process.env };
@@ -51,12 +54,22 @@ export async function completeCli(provider: CliProvider, model: string | undefin
           else if (d?.type === "thinking_delta" && !thinking && !live) { thinking = true; onProgress({ phase: "thinking" }); }
         } catch { /* partial or other output */ }
       };
-      const out = await runCli(provider, args, prompt, work, env, TIMEOUT_MS, onLine);
+      const input = images.length
+        ? `${JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: prompt }, ...images.map((png) => ({ type: "image", source: { type: "base64", media_type: "image/png", data: png.toString("base64") } }))] } })}\n`
+        : prompt;
+      const out = await runCli(provider, args, input, work, env, TIMEOUT_MS, onLine);
       return parseClaude(out);
     }
     const last = path.join(work, "answer.txt");
     const args = ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", last];
     if (model) args.push("--model", model);
+    // Codex takes images as files (--image).
+    const pics = messages.flatMap((m) => m.images ?? []);
+    for (const [i, png] of pics.entries()) {
+      const file = path.join(work, `frame-${i}.png`);
+      await writeFile(file, png);
+      args.push("--image", file);
+    }
     args.push("-");
     onProgress?.({ phase: "thinking" });
     const out = await runCli(provider, args, `${system}\n\n${prompt}`, work, process.env);

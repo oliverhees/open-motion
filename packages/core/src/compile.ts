@@ -225,7 +225,7 @@ html,body{margin:0;padding:0;background:#000}
 .om-m{display:inline-block;overflow:hidden;vertical-align:top;padding:.18em .04em .12em;margin:-.18em -.04em -.12em}
 .om-hl{display:inline}
 .om-count{font-variant-numeric:tabular-nums}
-.om-cap{position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:0 .22em}
+.om-cap{position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:0 .22em;white-space:normal}
 #om-cam{position:absolute;left:0;top:0;width:100%;height:100%}
 .om-tex{position:absolute;inset:0;pointer-events:none;z-index:100000}
 </style>
@@ -542,7 +542,7 @@ function textCss(st: TextStyle, ctx: ContentCtx, gradient: boolean, look: string
     st.italic ? "font-style:italic" : "",
     `color:${color(st.color ?? "#ffffff", palette)}`,
     `text-align:${st.align ?? "left"}`,
-    `justify-content:${{ top: "flex-start", middle: "center", bottom: "flex-end" }[st.valign ?? "top"]}`,
+    `justify-content:${{ top: "flex-start", middle: "center", center: "center", bottom: "flex-end" }[st.valign ?? "top"]}`,
     `line-height:${st.lineHeight ?? 1.15}`,
     st.letterSpacing ? `letter-spacing:${px(st.letterSpacing * s)}` : "",
     st.uppercase ? "text-transform:uppercase" : "",
@@ -640,7 +640,7 @@ function content(layer: VisualLayer, clipAttrs: string, ctx: ContentCtx, idSuffi
         st.italic ? "font-style:italic" : "",
         `color:${color(st.color ?? "#ffffff", palette)}`,
         `text-align:${st.align ?? "left"}`,
-        `justify-content:${{ top: "flex-start", middle: "center", bottom: "flex-end" }[st.valign ?? "top"]}`,
+        `justify-content:${{ top: "flex-start", middle: "center", center: "center", bottom: "flex-end" }[st.valign ?? "top"]}`,
         `line-height:${st.lineHeight ?? 1.15}`,
         st.letterSpacing ? `letter-spacing:${px(st.letterSpacing * s)}` : "",
         st.uppercase ? "text-transform:uppercase" : "",

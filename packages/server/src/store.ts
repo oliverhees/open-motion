@@ -236,6 +236,9 @@ export function blankSpec(lang: "de" | "en" = "en", opts: { format?: Format; sty
   const m = Math.round(Math.min(W, H) * 0.08);
   const big = Math.round(Math.min(W, H) * (vertical ? 0.11 : 0.12));
   const ph = { placeholder: true };
+  // Lines the headline needs: 2 in landscape, 3 in portrait (narrow column wraps "großartig" alone).
+  const lines = vertical ? 3 : 2;
+  const top = Math.round(H * (vertical ? 0.3 : 0.32));
   const spec: MotionSpec = {
     version: 1,
     meta: { title: de ? "Neues Projekt" : "New project", lang, ...(st ? { style: st.id } : {}) },
@@ -251,14 +254,14 @@ export function blankSpec(lang: "de" | "en" = "en", opts: { format?: Format; sty
       },
       {
         id: "title", name: de ? "Titel" : "Title", type: "text", scene: "s1", track: 5, start: 0.3, duration: 4.5, meta: ph,
-        frame: { x: m, y: Math.round(H * (vertical ? 0.36 : 0.32)), w: W - 2 * m, h: Math.round(big * 2.4) },
+        frame: { x: m, y: top, w: W - 2 * m, h: Math.round(big * 1.05 * lines + big * 0.3) },
         text: de ? "Dein Video,\n[[großartig]] erzählt." : "Your video,\n[[beautifully]] told.",
         style: { fontSize: big, fontWeight: st?.fonts.displayWeight ?? 800, color: "$ink", lineHeight: 1.02, letterSpacing: Math.round(-big * 0.03), highlight: "$accent", ...(st ? { fontFamily: st.fonts.display } : {}) },
         anim: { type: "mask", by: "word", stagger: 0.08, duration: 0.8, ease: "expo.out" }, out: { type: "fade", duration: 0.4 },
       },
       {
         id: "sub", name: de ? "Untertitel" : "Subtitle", type: "text", scene: "s1", track: 5, start: 1.1, duration: 3.7, meta: ph,
-        frame: { x: m, y: Math.round(H * (vertical ? 0.36 : 0.32) + big * 2.6), w: W - 2 * m, h: Math.round(big * 0.6) },
+        frame: { x: m, y: Math.round(top + big * 1.05 * lines + big * 0.6), w: W - 2 * m, h: Math.round(big * (vertical ? 1.1 : 0.6)) },
         text: de ? "Schreib links in den Chat, was du willst." : "Tell the chat on the left what you want.",
         style: { fontSize: Math.round(big * 0.32), fontWeight: st?.fonts.bodyWeight ?? 400, color: "$muted", ...(st ? { fontFamily: st.fonts.body } : {}) },
         in: { type: "fade", duration: 0.8 }, out: { type: "fade", duration: 0.4 },

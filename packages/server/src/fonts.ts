@@ -48,6 +48,17 @@ export async function ensureFonts(spec: MotionSpec, projectDir: string, f: Fetch
   return { op: { op: "style", set: { ...(spec.style ?? {}), fonts: [...(spec.style?.fonts ?? []), ...faces] } }, added, missing };
 }
 
+/**
+ * One woff2 of a family for UI previews (style cards), cached in <cacheDir>/assets/fonts.
+ * Served by our own server, so the browser never talks to Google (no IP leaks, works offline once cached).
+ */
+export async function previewFont(family: string, cacheDir: string, f: Fetch = httpFetch): Promise<string | null> {
+  if (!/^[A-Za-z0-9 ]{2,60}$/.test(family)) return null;
+  const faces = await download(family, cacheDir, f).catch(() => [] as FontFace[]);
+  const pick = faces.find((x) => x.style === "normal") ?? faces[0];
+  return pick ? path.join(cacheDir, pick.src) : null;
+}
+
 async function download(family: string, projectDir: string, f: Fetch): Promise<FontFace[]> {
   const name = family.trim().replace(/ +/g, "+");
   // Variable fonts first (one file for all weights), then fixed weights.
