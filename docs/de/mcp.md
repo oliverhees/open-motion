@@ -1,4 +1,4 @@
-# 🤖 Open Motion mit Claude Code, Codex und Hermes
+# 🤖 Open Motion mit Claude Code, Codex, Hermes und OpenCode
 
 Zwei Wege, beide **ohne API-Key**, mit deinem Abo:
 
@@ -55,10 +55,10 @@ npm start                        # → http://localhost:4317
 
 ## 🅰️ Weg A: Abo im Editor (KI-Chat, Kommentare, Grafiken)
 
-✅ **Mit dem Installer ist das schon eingestellt**, wenn er Claude Code oder Codex gefunden hat.
+✅ **Mit dem Installer ist das schon eingestellt**, wenn er Claude Code, Codex oder OpenCode gefunden hat.
 
 1. Editor öffnen → **⚙ Einstellungen**.
-2. Unter **KI-Modell** wählen: **Claude Code (Abo, ohne Key)** oder **Codex (Abo, ohne Key)**.
+2. Unter **KI-Modell** wählen: **Claude Code (Abo, ohne Key)**, **Codex (Abo, ohne Key)** oder **OpenCode (dein Login, ohne Key)**. Bei OpenCode ist das Modell `anbieter/modell`, z. B. `anthropic/claude-sonnet-4-5` (leer = Standard von OpenCode).
 3. Modellfeld leer lassen. Dann gilt der Standard der CLI. Oder z. B. `opus` bzw. `sonnet` eintragen.
 4. **Speichern** → 🩺 **Jetzt testen**.
 
@@ -66,7 +66,8 @@ npm start                        # → http://localhost:4317
 
 **Gut zu wissen**
 
-- 🔒 Die CLI darf dabei **keine Werkzeuge** nutzen (Claude Code: alle aus; Codex: nur lesen). Sie liefert nur die Änderung, und Open Motion prüft sie.
+- 🔒 Die CLI darf dabei **keine Werkzeuge** nutzen (Claude Code: alle aus; Codex: nur lesen; OpenCode: alle Werkzeuge gesperrt, läuft in einem leeren Ordner). Sie liefert nur die Änderung, und Open Motion prüft sie.
+- 🔑 OpenCode nutzt den Anbieter, mit dem du dich einmal angemeldet hast: `opencode auth login`.
 - 💳 Ist `ANTHROPIC_API_KEY` gesetzt, gibt Open Motion ihn **nicht** an `claude` weiter. So zählt immer das Abo.
 - 🖼️ **KI-Bilder** brauchen weiter einen Bild-Key (Kie.ai, OpenAI, OpenRouter oder Gemini). Ohne Key: Grafiken als SVG zeichnen lassen.
 - 🎙️ **Transkript:** lokal mit faster-whisper, ganz ohne Key.
@@ -113,6 +114,19 @@ mcp_servers:
 
 Kann deine Hermes-Version MCP über HTTP, geht auch direkt `url: "http://localhost:4317/mcp"`.
 
+### OpenCode
+
+In `~/.config/opencode/opencode.json` eintragen (der Installer macht das automatisch):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "openmotion": { "type": "remote", "url": "http://localhost:4317/mcp", "enabled": true }
+  }
+}
+```
+
 ### 🎬 Beispiel: Erklärvideo aus einer fertigen Facecam
 
 Sag deiner KI zum Beispiel:
@@ -131,7 +145,9 @@ Die KI folgt einem Regie-Ablauf, der im MCP steckt: Briefing → drei Richtungen
 
 | Werkzeug | Was es tut |
 | --- | --- |
-| `list_projects`, `create_project` | Projekte ansehen und anlegen (mit Format 16:9 / 9:16 / 1:1 / 4:5 und Stil) |
+| `list_projects`, `create_project` | Projekte ansehen und anlegen (mit Format 16:9 / 9:16 / 1:1 / 4:5, Stil und Marke; die Standard-Marke kommt automatisch drauf) |
+| `list_brands`, `apply_brand` | Deine Marken (Logo, Farben, Schriften, Slogan, Website, Handle); auf ein Projekt legen oder wieder abnehmen |
+| `list_templates`, `add_template` | 25 geprüfte Szenen und Einblendungen (Intro, Bauchbinde, große Zahl, Diagramm, CTA, Outro, Endcard …) im Look des Projekts |
 | `list_styles` | Die 14 Stile mit Schriften, Palette und Bewegungsregeln |
 | `get_project`, `get_spec` | Überblick bzw. komplette Motion-Spec |
 | `spec_reference` | Der Master-Prompt: Design-Gesetze, Engine-Referenz (Textanimation, Masken, Zähler, Zeichnen, 3D, Kamera, Texturen), Rezepte, Selbstcheck |
@@ -142,7 +158,7 @@ Die KI folgt einem Regie-Ablauf, der im MCP steckt: Briefing → drei Richtungen
 | `apply_patch` | Jede Änderung, wird geprüft (bei Fehler: nichts gespeichert, klare Meldung) |
 | `add_captions` | Untertitel aus dem Transkript, passend zu Format und Stil |
 | `look` | Rendert Frames und zeigt sie der KI als Bilder, damit sie ihre Arbeit beurteilen und korrigieren kann |
-| `export_video` | MP4 oder GIF rendern, Link über `job_status` |
+| `export_video` | MP4, GIF, **WebM/MOV mit transparentem Hintergrund** oder **Lottie (Beta)** rendern; Link über `job_status` (bei Lottie auch, was fehlt) |
 | `editor_url` | Link zum Projekt im Editor |
 
 ### 🔒 Sicherheit
@@ -170,6 +186,8 @@ Die KI folgt einem Regie-Ablauf, der im MCP steckt: Briefing → drei Richtungen
 | Kie-MCP-Erkennung | ✅ mit Konfig-Dateien getestet; Kie-Guthaben mit echtem Key nicht getestet |
 | stdio-Brücke | ✅ Protokoll getestet; mit Codex und Hermes noch **nicht** live |
 | **Hermes** | ⚠️ nicht live getestet. Heißen die Felder in deiner Version anders, schau in die Hermes-Doku |
+| **OpenCode** | ⚠️ nicht mit echtem Login getestet: CLI mit simuliertem `opencode run --format json` getestet, Installer-Eintrag live getestet (Linux) |
+| Marken, Vorlagen, Export WebM/MOV/Lottie per MCP | ✅ Werkzeuge getestet; derselbe Code wie im Editor, der im echten Browser getestet wurde |
 
 **Bekannte Grenzen**
 

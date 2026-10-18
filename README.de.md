@@ -8,13 +8,17 @@
 
 **Das offene, selbst-hostbare Motion-Graphics-Studio, in dem jedes Element eine live editierbare Ebene ist.**
 
-[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-71%20gr%C3%BCn-brightgreen.svg)](#-status)
+[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-90%20gr%C3%BCn-brightgreen.svg)](#-status)
 
 *Beschreib dein Video, sprich in die Facecam oder zieh Dateien rein. Die KI baut Ebenen, du feilst live nach, und am Ende kommt eine MP4 raus.*
 
 ![Showcase: von Claude Code über den Open-Motion-MCP gebaut, unbearbeitet](docs/assets/showcase.gif)
 
 <sub>☝️ Von Claude Code über den MCP in einem Rutsch gebaut (Briefing → Stil „Kinetic" → Beat-Sheet → Bauen → eigene Frames angeschaut und korrigiert → Export). Nicht von Hand angefasst. [MP4](docs/assets/showcase.mp4)</sub>
+
+<p align="center"><img src="docs/assets/showcase-reel.gif" alt="9:16-Reel, von Claude Code mit Vorlagen und Brand-Kit gebaut" width="260"></p>
+
+<sub>☝️ Ein 9:16-Reel, das Claude Code über den MCP aus 5 Vorlagen in der Marke „Nordlicht Studio" (eine Demo-Marke) gebaut und als MP4 und transparentes WebM exportiert hat.</sub>
 
 [Quickstart](#-quickstart) · [Features](#-features) · [Screenshots](#-screenshots) · [Architektur](#-architektur) · [Coolify-Deploy](docs/de/coolify.md) · [Handbuch](docs/de/handbuch.md) · [Lizenz](#-lizenz)
 
@@ -36,11 +40,15 @@ Dazu kommt, was ein Erklärvideo braucht: Facecam-Aufnahme im Browser, ein Trans
 | **Inhalt tauschen, Rahmen bleibt** | ❌ | ⚠️ umständlich | ✅ Grafik → KI-Bild → Video; Position und Animation bleiben |
 | **Facecam + Transkript + Text-Schnitt** | ❌ | ⚠️ oft Zusatzsoftware | ✅ eingebaut; Grafiken hängen an Wörtern und wandern beim Schneiden mit |
 | **KI schaut sich das Ergebnis an** | ❌ | ❌ | ✅ rendert Frames, bewertet sie, korrigiert, was nicht passt (bis 2 Runden) |
-| **KI-Modell frei wählbar** | ❌ Modell des Anbieters | ❌ | ✅ dein Claude-Code-/Codex-Abo oder eigene Keys: Claude, OpenAI, OpenRouter; Bilder über Kie.ai, OpenAI, OpenRouter, Gemini |
+| **Vorlagen in deiner Marke** | ⚠️ feste Looks | ⚠️ Pakete kaufen | ✅ 25 geprüfte Szenen und Einblendungen, die Format, Stil, Logo, Farben und Schriften übernehmen |
+| **Overlays für andere Schnittprogramme** | ❌ | ✅ | ✅ WebM/MOV mit transparentem Hintergrund, Lottie (Beta) |
+| **KI-Modell frei wählbar** | ❌ Modell des Anbieters | ❌ | ✅ dein Claude-Code-/Codex-/OpenCode-Login oder eigene Keys: Claude, OpenAI, OpenRouter; Bilder über Kie.ai, OpenAI, OpenRouter, Gemini |
 | **Selbst hosten, Daten bleiben bei dir** | ❌ Cloud | ✅ lokal | ✅ Docker + Coolify, ein Ordner pro Projekt |
 | **Quellcode** | ❌ | ❌ meist | ✅ AGPL-3.0 |
 
 **Und „Claude Motion" oder Prompt-zu-Video-Skills?** Claude Motion (Anthropic, Beta für Team/Enterprise) und die beliebten Remotion-/HyperFrames-Skills machen aus einem Prompt Animations-Code und ein Video. Das funktioniert, und die besten Prompt-Anleitungen sagen alle dasselbe: Beats mit Zeiten, exakte Farben und Schriften, Sicherheitsbereiche, vor dem finalen Rendern Frames anschauen. Bei Open Motion stecken diese Regeln **schon im Master-Prompt** und in 14 Stilen, du musst also keinen 40-Zeilen-Prompt schreiben. Der Unterschied beginnt nach dem ersten Rendern: Hier bleibt jedes Element eine editierbare Ebene, Facecam und Transkript gehören zum Projekt, du schneidest im Text, und eine Ein-Wort-Korrektur ändert ein Element, statt den Clip neu zu generieren. Läuft auf deinem Rechner, Open Source.
+
+**Und Open Design / motion-anything?** [Open Design](https://open-design.ai) (mit der Engine motion-anything) ist ein starkes Open-Source-Werkzeug für kurze Marken-Animationen: Titelkarten, Logo-Outros, viele Vorlagen, Export als Lottie und React. Mit einer Aufnahme arbeitet es nicht: keine Facecam, kein Transkript, kein Schnitt im Text, keine Untertitel. Open Motion ist genau dafür gebaut, Erklärvideos mit deinem Gesicht und deiner Stimme, und hat jetzt auch Brand-Kit, Vorlagen und Transparent-/Lottie-Export. Brauchst du nur ein Logo-Sting, gehen beide; sprichst du in deinem Video, ist Open Motion dafür gemacht.
 
 Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, ist keine neue Idee. Unser Beitrag ist alles, was fehlt, wenn man nur rendert: ein Ebenen-Modell, das KI **und** Mensch gleichzeitig bearbeiten können, ein Live-Editor ohne Neuladen, ein Facecam-Workflow mit Text-Schnitt und ein Rendering, das sich selbst an die Hardware anpasst.
 
@@ -55,9 +63,11 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 - **Schaut sich die eigene Arbeit an:** nach größeren Umbauten bekommt die KI gerenderte Frames, bewertet Hook, Lesbarkeit, Layout und Bewegung und korrigiert alles unter 8.
 - **Formate:** 16:9, 9:16 (Reels/TikTok/Shorts mit Plattform-Sicherheitsbereichen), 1:1, 4:5.
 - **Motion-Engine:** Text pro Wort/Buchstabe/Zeile, Textmarker-Effekt, hochzählende Zahlen, sich selbst zeichnende Linien, Masken- und Iris-Blenden, 3D-Kippen, Unschärfe, Kamerafahrten, Glow/Schatten/Glas, Körnung/Vignette/Scanlines, Federn. Google Fonts werden automatisch geladen und lokal gespeichert (die Vorschau fragt nie bei Google an).
+- **Brand-Kit:** Logo, Farben, Schriften (Google Fonts oder eigene Dateien), Slogan, Website, Handle und auf Wunsch ein kleines Logo in der Ecke. Mehrere Marken, eine als Standard für neue Videos, pro Projekt umschaltbar; Ausschalten stellt den Look exakt wieder her.
+- **25 Vorlagen:** Intro, Titelkarte, Kapitel, Hook, Statement, große Zahl, Kennzahlen, Balkendiagramm, Liste, Schritte, Vergleich, Zitat, Call to Action, Outro, YouTube-Endcard, Countdown, Checkliste, Zeitstrahl, dazu Einblendungen (Bauchbinde, Hinweis mit Linie, Abo-Button, Schlagwort, Handle, Einkreisen, Pfeil). Live-Vorschau in deinem Look vor dem Einfügen; jeder Text wird mit gemessenen Schriftbreiten eingepasst und im Browser in allen Formaten geprüft.
 - **Untertitel per Klick:** aus dem Transkript, passend zu Format und Stil, folgen deinen Schnitten.
-- **Kie AI:** Key in den Einstellungen mit Guthaben-Anzeige; ein Kie-MCP in Claude Code / Codex / Hermes wird erkannt.
-- **Kein API-Key nötig:** nutze dein **Claude-Code**- oder **Codex**-Abo. Oder lass **Claude Code, Codex oder Hermes** das ganze Video per **MCP** bauen, während du live im Editor zuschaust.
+- **Kie AI:** Key in den Einstellungen mit Guthaben-Anzeige; ein Kie-MCP in Claude Code / Codex / Hermes / OpenCode wird erkannt.
+- **Kein API-Key nötig:** nutze dein **Claude-Code**-, **Codex**- oder **OpenCode**-Login. Oder lass **Claude Code, Codex, Hermes oder OpenCode** das ganze Video per **MCP** bauen, während du live im Editor zuschaust.
 - **Installer in einer Zeile** für Linux, macOS und Windows: Node, FFmpeg, Whisper, Start-Symbol, KI-Tools verbunden.
 - **Kommentare am Element:** Element anklicken, „@KI mach das grün" schreiben, fertig. Nur dieses Element ändert sich.
 - **Facecam:** Aufnahme im Browser oder Upload, Ton auf eigener Spur, Layout-Knöpfe (groß, Ecke, Kreis, Split) mit weichen Übergängen.
@@ -65,7 +75,7 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 - **Anker:** Grafiken hängen an gesprochenen Wörtern.
 - **Text-Schnitt:** Wörter löschen schneidet das Video. Füllwörter und lange Pausen werden vorgeschlagen, der Ton bekommt beim Export knackfreie Mini-Blenden.
 - **KI-Bilder:** Kie.ai, OpenAI, OpenRouter oder Gemini, sofort lokal gespeichert.
-- **Export:** MP4 oder GIF, 720p oder 1080p, 15/30/60 fps, auf Wunsch schärferer Text.
+- **Export:** MP4 oder GIF, 720p oder 1080p, 15/30/60 fps, auf Wunsch schärferer Text. **WebM und MOV (ProRes 4444) mit transparentem Hintergrund** für Overlays in Premiere, DaVinci oder CapCut; Hintergrund-Flächen werden erkannt und sind abwählbar. **Lottie (Beta)** für Apps und Webseiten: jedes Easing und jeder Übergang kommt Bild für Bild exakt raus, was Lottie nicht kann (Video, Glow, Unschärfe, 3D), steht nach dem Export im Dialog.
 - **Selbstanpassendes Rendering:** erkennt CPU, RAM und GPU (auch Container-Grenzen), plant die Render-Worker und lernt aus jedem Export, wie lange es wirklich dauert.
 - **Zweisprachige Oberfläche:** Deutsch und Englisch, umschaltbar.
 - **Selbst hostbar:** Docker-Image in den Varianten `slim` und `whisper`, Editor und Render-Worker als getrennte Dienste.
@@ -77,6 +87,8 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 | [![Live-Editor](docs/assets/editor.png)](docs/assets/editor.png) | [![KI-Chat](docs/assets/ai-chat.png)](docs/assets/ai-chat.png) |
 | **Transkript und Anker** | **Text-Schnitt** |
 | [![Transkript und Anker](docs/assets/transcript-anchors.png)](docs/assets/transcript-anchors.png) | [![Text-Schnitt](docs/assets/text-cut.png)](docs/assets/text-cut.png) |
+| **Vorlagen mit Live-Vorschau in deiner Marke** | **Brand-Kit** |
+| [![Vorlagen](docs/assets/templates.png)](docs/assets/templates.png) | [![Brand-Kit](docs/assets/brand.png)](docs/assets/brand.png) |
 
 <sub>Der KI-Chat-Screenshot zeigt einen nachgestellten Verlauf; die dort genannten Änderungen wurden wirklich am Projekt ausgeführt.</sub>
 
@@ -188,7 +200,7 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, abgesichert durch 71 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
+**Beta 0.1, abgesichert durch 90 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
 
 - [x] Ebenen-Kern: Spec, Patches, Compiler, Render zu MP4/GIF (Bild für Bild geprüft)
 - [x] Live-Editor: ziehen, skalieren, tippen, Auto-Keyframes, Szenen, Kommentare
@@ -203,7 +215,8 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 - [x] MCP-Server für Claude Code, Codex, Hermes, mit Live-Abgleich im Editor (live mit Claude Code getestet)
 - [x] Stile, Master-Prompt, Interview-Formular, Spracheingabe, KI-Rückfragen, Selbstkritik mit Frames (live mit Claude Code getestet; das Showcase oben ist so entstanden)
 - [x] Motion-Engine 2, Formate 16:9 / 9:16 / 1:1 / 4:5, Untertitel per Klick (als MP4 exportiert und Bild für Bild geprüft)
-- [ ] Nicht live getestet: Codex und Hermes (nach deren Doku gebaut), Selbstkritik mit Codex, Kie AI mit echtem Key
+- [x] Brand-Kit, 25 Vorlagen, transparentes WebM/MOV, Lottie (Beta) (im echten Browser getestet: Vorlagen in allen 14 Stilen × 4 Formaten, auch mit überlangen Texten; Lottie Bild für Bild in lottie-web verglichen; Transparenz in den exportierten Dateien geprüft)
+- [ ] Nicht live getestet: Codex, Hermes und OpenCode mit echtem Login (nach deren Doku gebaut, mit simulierten CLIs getestet), Selbstkritik mit Codex, Kie AI mit echtem Key
 - [ ] Live-Test aller KI-, Bild- und Transkriptions-APIs mit echten Keys
 - [ ] Docker-Build in Coolify bestätigt
 - [ ] Skill für claude.ai, Claude Code, Cowork und Hermes

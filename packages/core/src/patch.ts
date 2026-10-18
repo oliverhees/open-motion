@@ -170,7 +170,20 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
     case "scene": {
       const scene = spec.scenes.find((s) => s.id === op.id);
       if (!scene) throw new PatchError(i, `no scene with id "${op.id}"`);
+      const before = scene.duration;
       Object.assign(scene, op.set);
+      // A shorter scene trims its layers, so nothing spills into the next scene (anchored layers keep their word timing).
+      if (typeof op.set.duration === "number" && op.set.duration < before) {
+        for (const l of spec.layers) {
+          if (l.scene !== op.id || l.anchor || l.start + l.duration <= op.set.duration + 1e-6) continue;
+          l.duration = Math.max(0.1, Math.round((op.set.duration - l.start) * 1000) / 1000);
+          // Keyframes after the new end would never play.
+          if (isVisual(l) && l.keys) for (const k of Object.keys(l.keys) as AnimProp[]) {
+            const list = l.keys[k]!.filter((kf) => kf.t <= l.duration + 1e-6);
+            if (list.length) l.keys[k] = list; else delete l.keys[k];
+          }
+        }
+      }
       spec.layers.filter((l) => l.scene === op.id).forEach((l) => changed.add(l.id));
       return;
     }

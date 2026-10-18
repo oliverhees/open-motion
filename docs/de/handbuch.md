@@ -96,6 +96,28 @@ Modelle werden beim ersten Lauf nach `data/models/` geladen. Das Audio dekodiert
 
 **Effekte, die du anfragen oder im Panel setzen kannst:** Text pro Wort/Buchstabe/Zeile, Textmarker auf einem Wort, hochzählende Zahlen, Linien, die sich selbst zeichnen, Masken- und Iris-Blenden, 3D-Kippen, Unschärfe, Kamerafahrten, Glow/Schatten/Glas, Körnung/Vignette/Scanlines, Untertitel aus dem Transkript (Tab „Medien").
 
+## 🏷️ Brand-Kit
+
+1. **🎨 Marken** (Startseite, ⚙ Einstellungen oder Tab „Stil") → **Neue Marke**.
+2. Logo (PNG, JPEG, WebP, SVG), Farben (nur die Hauptfarbe ist Pflicht, der Rest wird so abgeleitet, dass Text lesbar bleibt), Schriften (Name einer Google Font oder eigene WOFF2/TTF-Datei), Slogan, Website, Handle.
+3. Optional: **Logo im Video** in einer Ecke (Größe, Deckkraft). Es läuft immer über das ganze Video.
+4. **Standard für neue Videos** an → jedes neue Video startet in deiner Marke. Pro Projekt: Tab **Stil** → **Marke** (wechseln, erneut anwenden oder „Keine Marke", das stellt den Look exakt wieder her).
+
+## 🧩 Vorlagen (Tab „Vorlagen")
+
+25 fertige Szenen und Einblendungen: Intro, Titelkarte, Kapitel, Hook, Statement, große Zahl, 3 Kennzahlen, Balkendiagramm, Liste, Schritte, Vergleich, Zitat, Call to Action, Outro, YouTube-Endcard, Countdown, Checkliste, Zeitstrahl · Bauchbinde, Hinweis mit Linie, Abo-Button, Schlagwort, Handle, Einkreisen, Pfeil.
+
+1. Vorlage anklicken → **Live-Vorschau in deinem Format, Stil und deiner Marke**.
+2. Texte anpassen (`[[Wort]]` hebt hervor) → **Einfügen**. Szenen kommen hinter die aktuelle Szene, Einblendungen an den Abspielkopf.
+3. Läuft eine Aufnahme durch das Video, werden Szenen-Vorlagen als Vollbild-Karte am Abspielkopf eingeblendet; die Stimme läuft weiter.
+4. Alles Eingefügte sind normale Ebenen: anklicken, ziehen, ändern oder die KI fragen.
+
+## 📦 Export-Formate
+
+- **MP4 / GIF:** das fertige Video.
+- **WebM / MOV · transparent:** für Overlays in Premiere, DaVinci, CapCut oder auf Webseiten. Vollflächige Hintergründe werden automatisch ausgeblendet (im Dialog abwählbar). MOV ist ProRes 4444: groß, gemacht für Schnittprogramme.
+- **Lottie (Beta):** eine JSON für Apps, Webseiten und After Effects. Formen, Text, Bilder, Verläufe, Zähler, Wischblenden und alle Übergänge; Video, Untertitel, Glow, Unschärfe und 3D fehlen, der Dialog zeigt, was fehlt. Die Schriften müssen dort installiert sein, wo die Lottie abgespielt wird.
+
 ## ✦ KI (Chat links, wie bei Motion)
 
 - **Chat:** „Mach eine 20-Sekunden-Animation für mein Café, 4 Szenen, warm und ruhig." Die KI baut die Szenen, Texte, gezeichneten Grafiken und Bilder.

@@ -153,3 +153,27 @@ test("templates: an overlay near the end of a scene is shortened to fit (≥ 2 s
   const b = applyPatch(spec, [{ op: "template", id: "lowerthird", at: 4.2 }]).spec;
   assert.ok(b.scenes[0].duration > 8, "scene extended when less than 2 s are left");
 });
+
+test("templates: every template in every style and format (and both languages) gives a valid spec", async () => {
+  const { applyPatch, FORMATS, FORMAT_SIZE, STYLES, TEMPLATES } = await import("@openmotion/core");
+  let n = 0;
+  for (const f of FORMATS) for (const st of STYLES) for (const lang of ["de", "en"]) {
+    const { width, height } = FORMAT_SIZE[f];
+    const spec = base([], { meta: { title: "T", lang, style: st.id }, canvas: { width, height, fps: 30, background: "$bg" }, style: { palette: { ...st.palette } } });
+    for (const t of TEMPLATES) { applyPatch(spec, [{ op: "template", id: t.id, at: 1 }]); n++; }
+  }
+  assert.equal(n, 4 * STYLES.length * 2 * TEMPLATES.length);
+});
+
+test("scene op: a shorter scene trims its layers and their late keyframes, anchored layers stay", async () => {
+  const { applyPatch } = await import("@openmotion/core");
+  const spec = base([
+    { id: "a", type: "shape", shape: "rect", track: 1, scene: "s", start: 0.5, duration: 1.5, frame: { x: 0, y: 0, w: 10, h: 10 }, fill: "#fff", keys: { scale: [{ t: 0, v: 1 }, { t: 1.4, v: 2 }] } },
+    { id: "b", type: "shape", shape: "rect", track: 1, scene: "s", start: 0, duration: 0.5, frame: { x: 0, y: 0, w: 10, h: 10 }, fill: "#fff" },
+  ]);
+  const out = applyPatch(spec, [{ op: "scene", id: "s", set: { duration: 1.2 } }]).spec;
+  const a = out.layers.find((l) => l.id === "a")!;
+  assert.equal(a.duration, 0.7);
+  assert.deepEqual(a.type === "shape" && a.keys?.scale?.map((k) => k.t), [0]);
+  assert.equal(out.layers.find((l) => l.id === "b")!.duration, 0.5, "layers that fit stay");
+});

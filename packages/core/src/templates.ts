@@ -56,6 +56,8 @@ export interface TemplateCtx {
   track: number;
   /** true when laid over a recording (needs its own background). */
   overlayScene: boolean;
+  /** Art direction id (cards follow its signature). */
+  style?: string;
 }
 
 // ───────────── helpers ─────────────
@@ -200,6 +202,21 @@ function bgPanel(c: TemplateCtx): ShapeLayer | null {
   return c.overlayScene ? shape(c, "bg", { x: 0, y: 0, w: c.W, h: c.H }, "$bg", { track: c.track - 1, in: { type: "fade", duration: 0.35 } }) : null;
 }
 
+/**
+ * A card / panel in the style's signature: glass cards, hard offset shadows, soft rounded app cards, neon edges.
+ * fill = the plain fill for styles without a signature.
+ */
+function card(c: TemplateCtx, fill = "$surface"): Partial<ShapeLayer> {
+  switch (c.style) {
+    case "glass": return { fill: "rgba(255,255,255,0.10)", stroke: "rgba(255,255,255,0.22)", strokeWidth: 2, look: { glass: 24, shadow: "0 24px 60px rgba(0,0,0,0.35)" } };
+    case "brutal": return { fill, stroke: "#000000", strokeWidth: r(c.u * 0.45), look: { shadow: `${r(c.u * 0.8)}px ${r(c.u * 0.8)}px 0 #000000` } };
+    case "pastel": return { fill, radius: r(c.u * 3.5), look: { shadow: "0 20px 40px #2E2A4F1A" } };
+    case "neon": return { fill, stroke: "$accent", strokeWidth: 2, look: { glow: "$accent", glowSize: 0.6 } };
+    case "keynote": case "velvet": return { fill, look: { shadow: "0 30px 80px rgba(0,0,0,0.45)" } };
+    default: return { fill };
+  }
+}
+
 const accent2 = (c: TemplateCtx) => (c.has("accent2") ? "$accent2" : "$accent");
 const L = (de: string, en: string): L10n => ({ de, en });
 const clean = <T,>(list: (T | null | undefined | false)[]): T[] => list.filter(Boolean) as T[];
@@ -323,7 +340,7 @@ export const TEMPLATES: TemplateDef[] = [
       const shown = `${v.prefix}${v.num}${v.suffix}`;
       const ring = Math.min(x1 - x0, (y1 - y0) * (c.vertical ? 0.5 : 0.78));
       const cx = c.W / 2;
-      const cy = c.vertical ? y0 + (y1 - y0) * 0.38 : (y0 + y1) / 2 - c.u * 4;
+      const cy = c.vertical ? y0 + (y1 - y0) * 0.44 : (y0 + y1) / 2 - c.u * 4;
       const size = r(Math.min(ring * 0.3, (ring * 0.78) / Math.max(2, shown.length * c.font.dw)));
       const sw = r(c.u * 1.2);
       const rad = ring / 2 - sw;
@@ -355,7 +372,7 @@ export const TEMPLATES: TemplateDef[] = [
         const m = /^([^\d-]*)(-?[\d.,]+)(.*)$/.exec(it.n);
         const to = m ? Number(m[2].replace(",", ".")) : NaN;
         const t = 0.2 + i * 0.45;
-        out.push(at(c, T, shape(c, `card${i}`, { x, y: y - c.u * 2, w: colW, h: numSize * 1.3 + c.u * 14 }, "$surface", { radius: r(c.u * 2), in: enter(c, "slideUp") }), t - 0.1));
+        out.push(at(c, T, shape(c, `card${i}`, { x, y: y - c.u * 2, w: colW, h: numSize * 1.3 + c.u * 14 }, "$surface", { radius: r(c.u * 2), ...card(c), in: enter(c, "slideUp") }), t - 0.1));
         out.push(at(c, T, txt(c, `n${i}`, { x: x + c.u * 2, y, w: colW - c.u * 4, h: numSize * 1.3 }, it.n, { fontFamily: c.font.display, fontWeight: c.font.displayWeight, fontSize: numSize, lineHeight: 1.1, color: i === 1 ? accent2(c) : "$accent", align: c.vertical ? "left" : "center" },
           { in: enter(c, "pop"), ...(m && Number.isFinite(to) ? { count: { from: 0, to, decimals: (/[.,]\d/.test(m[2]) ? 1 : 0) as 0 | 1, duration: 1.2, ease: "expo.out", prefix: m[1], suffix: m[3] } } : {}) }), t));
         out.push(at(c, T, body(c, `l${i}`, { x: x + c.u * 2, y: y + numSize * 1.3 + c.u * 1, w: colW - c.u * 4, h: c.u * 10 }, it.label, c.u * 3.8, { styleExtra: { align: c.vertical ? "left" : "center", color: "$ink" } }), t + 0.25));
@@ -378,16 +395,18 @@ export const TEMPLATES: TemplateDef[] = [
       const out: (Layer | null)[] = [at(c, T, bgPanel(c), 0)];
       const titleH = c.u * 9;
       out.push(at(c, T, headline(c, "title", { x: x0, y: y0, w: x1 - x0, h: titleH }, v.title, c.u * 7), 0.1));
-      const top = y0 + titleH + c.u * 4;
+      const area = y0 + titleH + c.u * 4;
       const n = Math.max(1, items.length);
       const gap = c.u * 2.4;
-      const rowH = Math.min(c.u * 12, (y1 - top - gap * (n - 1)) / n);
+      const rowH = Math.min(c.u * (c.vertical ? 20 : 12), (y1 - area - gap * (n - 1)) / n);
+      // The chart sits in the middle of the free space (slightly above center), not glued under the title.
+      const top = area + Math.max(0, (y1 - area - (n * rowH + (n - 1) * gap)) * 0.4);
       const labelW = c.vertical ? 0 : (x1 - x0) * 0.28;
       const barX = x0 + labelW + (labelW ? c.u * 2 : 0);
       // Value labels sit right of the bars: reserve room for the longest one in this font.
       const valText = (v2: number) => `${v2}${v.unit}`;
       const longestVal = Math.max(...items.map((i) => valText(i.val).length), 2);
-      const valSize = r(Math.min(c.u * 4.6, (rowH * (c.vertical ? 0.5 : 1)) * 0.6));
+      const valSize = r(Math.min(c.u * (c.vertical ? 5.5 : 4.6), (rowH * (c.vertical ? 0.5 : 1)) * 0.6));
       const valW = longestVal * valSize * c.font.dw + c.u * 2;
       const barMax = Math.max(c.u * 10, x1 - barX - valW - c.u * 1.5);
       items.forEach((it, i) => {
@@ -397,7 +416,7 @@ export const TEMPLATES: TemplateDef[] = [
         const barY = c.vertical ? y + rowH * 0.46 : y;
         const barH = c.vertical ? rowH * 0.5 : rowH;
         if (labelW) out.push(at(c, T, body(c, `name${i}`, { x: x0, y: y + rowH * 0.15, w: labelW, h: rowH * 0.7 }, it.name, c.u * 3.8, { styleExtra: { align: "right", valign: "middle", color: "$ink" } }), t));
-        else out.push(at(c, T, body(c, `name${i}`, { x: barX, y, w: x1 - x0, h: rowH * 0.42 }, it.name, Math.min(c.u * 3.6, rowH * 0.3), { styleExtra: { color: "$ink", valign: "bottom" } }), t));
+        else out.push(at(c, T, body(c, `name${i}`, { x: barX, y, w: x1 - x0, h: rowH * 0.42 }, it.name, Math.min(c.u * 4.6, rowH * 0.34), { styleExtra: { color: "$ink", valign: "bottom" } }), t));
         out.push(at(c, T, shape(c, `bar${i}`, { x: barX, y: barY, w, h: barH }, i === items.length - 1 ? "$accent" : "$surface", { radius: r(Math.min(barH / 2, c.u * 1.2)), in: { type: "wipe", duration: 0.8, ease: "power3.out" } }), t));
         out.push(at(c, T, txt(c, `val${i}`, { x: barX + w + c.u * 1.5, y: barY, w: valW, h: barH }, valText(it.val), { fontFamily: c.font.display, fontWeight: c.font.displayWeight, fontSize: valSize, valign: "middle", lineHeight: 1.1, color: i === items.length - 1 ? "$accent" : "$ink" }, { in: enter(c, "fade") }), t + 0.55));
       });
@@ -416,9 +435,12 @@ export const TEMPLATES: TemplateDef[] = [
       const items = lines(v.items, 5);
       const out: (Layer | null)[] = [at(c, T, bgPanel(c), 0)];
       const titleH = c.u * (c.vertical ? 22 : 16);
-      out.push(at(c, T, headline(c, "title", { x: x0, y: y0, w: x1 - x0, h: titleH }, v.title, c.u * (c.vertical ? 9 : 8.5)), 0.1));
-      const top = y0 + titleH + c.u * 4;
-      const rowH = Math.min(c.u * 13, (y1 - top) / Math.max(1, items.length));
+      const rowH0 = Math.min(c.u * (c.vertical ? 16 : 13), (y1 - y0 - titleH - c.u * 4) / Math.max(1, items.length));
+      // Title + points as one block, a little above the middle of the free height (not glued to the top).
+      const by = y0 + Math.max(0, (y1 - y0 - (titleH + c.u * 4 + rowH0 * items.length)) * 0.4);
+      out.push(at(c, T, headline(c, "title", { x: x0, y: by, w: x1 - x0, h: titleH }, v.title, c.u * (c.vertical ? 9 : 8.5)), 0.1));
+      const top = by + titleH + c.u * 4;
+      const rowH = rowH0;
       const badge = Math.min(rowH * 0.7, c.u * 8);
       items.forEach((it, i) => {
         const y = top + i * rowH;
@@ -484,7 +506,7 @@ export const TEMPLATES: TemplateDef[] = [
         const t = 0.2 + i * 0.6;
         const pad = c.u * 4;
         const onAccent = i === 1;
-        out.push(at(c, T, shape(c, `card${i}`, f, fill, { radius: r(c.u * 2.5), in: enter(c, i ? "slideLeft" : "slideRight") }), t));
+        out.push(at(c, T, shape(c, `card${i}`, f, fill, { radius: r(c.u * 2.5), ...(i === 0 ? card(c) : {}), in: enter(c, i ? "slideLeft" : "slideRight") }), t));
         out.push(at(c, T, headline(c, `title${i}`, { x: f.x + pad, y: f.y + pad, w: f.w - 2 * pad, h: c.u * 13 }, title, c.u * 7.5, { styleExtra: { color: onAccent ? "$bg" : "$ink", highlight: onAccent ? "$bg" : "$accent" } }), t + 0.15));
         out.push(at(c, T, body(c, `items${i}`, { x: f.x + pad, y: f.y + pad + c.u * 15, w: f.w - 2 * pad, h: f.h - 2 * pad - c.u * 15 }, lines(items).map((l) => `${onAccent ? "✓" : "✗"}  ${l}`).join("\n"), c.u * 4.2, { styleExtra: { color: onAccent ? "$bg" : "$muted" } }), t + 0.35));
       });
@@ -580,7 +602,7 @@ export const TEMPLATES: TemplateDef[] = [
       const tiles = c.vertical
         ? [{ x: x0, y: y0 + c.u * 16 }, { x: x0, y: y0 + c.u * 16 + tileH + c.u * 5 }]
         : [{ x: x0, y: y0 + c.u * 18 }, { x: x0 + tileW + c.u * 6, y: y0 + c.u * 18 }];
-      tiles.forEach((p, i) => out.push(at(c, T, shape(c, `tile${i}`, { ...p, w: tileW, h: tileH }, "$surface", { radius: r(c.u * 1.5), stroke: "$accent", strokeWidth: r(c.u * 0.3), in: enter(c, "slideUp") }), 0.4 + i * 0.2)));
+      tiles.forEach((p, i) => out.push(at(c, T, shape(c, `tile${i}`, { ...p, w: tileW, h: tileH }, "$surface", { radius: r(c.u * 1.5), stroke: "$accent", strokeWidth: r(c.u * 0.3), ...card(c), in: enter(c, "slideUp") }), 0.4 + i * 0.2)));
       const sub = c.u * (c.vertical ? 16 : 18);
       const sp = c.vertical ? { x: c.W / 2 - sub / 2, y: tiles[1].y + tileH + c.u * 6 } : { x: x1 - sub, y: y0 + c.u * 18 + (tileH - sub) / 2 };
       const lg = logo(c, "logo", { x: sp.x + sub * 0.18, y: sp.y + sub * 0.18, w: sub * 0.64, h: sub * 0.64 }, { track: c.track + 8 });
@@ -615,9 +637,10 @@ export const TEMPLATES: TemplateDef[] = [
       const items = lines(v.items, 5);
       const out: (Layer | null)[] = [at(c, T, bgPanel(c), 0)];
       const titleH = c.u * (c.vertical ? 22 : 16);
-      out.push(at(c, T, headline(c, "title", { x: x0, y: y0, w: x1 - x0, h: titleH }, v.title, c.u * (c.vertical ? 9 : 8.5)), 0.1));
-      const top = y0 + titleH + c.u * 5;
-      const rowH = Math.min(c.u * 13, (y1 - top) / Math.max(1, items.length));
+      const rowH = Math.min(c.u * (c.vertical ? 16 : 13), (y1 - y0 - titleH - c.u * 5) / Math.max(1, items.length));
+      const by = y0 + Math.max(0, (y1 - y0 - (titleH + c.u * 5 + rowH * items.length)) * 0.4);
+      out.push(at(c, T, headline(c, "title", { x: x0, y: by, w: x1 - x0, h: titleH }, v.title, c.u * (c.vertical ? 9 : 8.5)), 0.1));
+      const top = by + titleH + c.u * 5;
       const box = Math.min(rowH * 0.62, c.u * 7.5);
       items.forEach((it, i) => {
         const y = top + i * rowH;
@@ -689,7 +712,7 @@ export const TEMPLATES: TemplateDef[] = [
       const x = c.vertical ? (c.W - w) / 2 : x0;
       const y = c.vertical ? y1 - h - c.u * 6 : y1 - h;
       return clean([
-        at(c, T, shape(c, "panel", { x, y, w, h }, "$surface", { radius: r(c.u * 1.2), in: { type: "wipe", duration: 0.5, ease: c.motion.enter } }), 0),
+        at(c, T, shape(c, "panel", { x, y, w, h }, "$surface", { radius: r(c.u * 1.2), ...card(c), in: { type: "wipe", duration: 0.5, ease: c.motion.enter } }), 0),
         at(c, T, shape(c, "bar", { x, y, w: c.u * 0.9, h }, "$accent", { in: { type: "wipeDown", duration: 0.4, ease: c.motion.enter } }), 0.1),
         at(c, T, txt(c, "name", { x: x + c.u * 3.5, y: y + c.u * 1.4, w: w - c.u * 5, h: nameSize * 1.25 }, v.name, { fontFamily: c.font.display, fontWeight: c.font.displayWeight, fontSize: nameSize, lineHeight: 1.15 }, { in: enter(c, "slideRight") }), 0.25),
         at(c, T, txt(c, "role", { x: x + c.u * 3.5, y: y + c.u * 1.6 + nameSize * 1.25, w: w - c.u * 5, h: roleSize * 1.4 }, v.role, { fontSize: roleSize, color: "$muted", lineHeight: 1.3 }, { in: enter(c, "slideRight") }), 0.4),
@@ -771,7 +794,7 @@ export const TEMPLATES: TemplateDef[] = [
       const x = (c.W - w) / 2;
       const y = c.vertical ? c.safe.y1 - h - c.u * 8 : c.safe.y1 - h;
       return clean([
-        at(c, T, shape(c, "pill", { x, y, w, h }, "$surface", { radius: r(h / 2), in: enter(c, "slideUp") }), 0),
+        at(c, T, shape(c, "pill", { x, y, w, h }, "$surface", { radius: r(h / 2), ...card(c), ...(c.style === "pastel" ? { radius: r(h / 2) } : {}), in: enter(c, "slideUp") }), 0),
         at(c, T, shape(c, "icon", { x: x + c.u * 0.8, y: y + c.u * 0.8, w: icon, h: icon }, "$accent", { shape: "ellipse", in: enter(c, "pop") }), 0.15),
         at(c, T, txt(c, "at", { x: x + c.u * 0.8, y: y + c.u * 0.8, w: icon, h: icon }, "@", { fontWeight: 700, fontSize: r(icon * 0.55), align: "center", valign: "middle", color: "$bg", lineHeight: 1 }, { in: enter(c, "pop") }), 0.2),
         at(c, T, txt(c, "handle", { x: x + icon + c.u * 2.5, y, w: w - icon - c.u * 3, h }, v.handle, { fontWeight: 700, fontSize: size, valign: "middle", lineHeight: 1 }, { in: enter(c, "fade") }), 0.3),
@@ -954,7 +977,7 @@ function context(spec: MotionSpec, t0: number, scene: string, track: number, ove
       ? { enter: st.motion.enter, exit: st.motion.exit, inDur: st.motion.inDur, outDur: st.motion.outDur, stagger: st.motion.stagger, text: st.motion.text }
       : { enter: "power3.out", exit: "power2.in", inDur: 0.5, outDur: 0.35, stagger: 0.06, text: { type: "rise", by: "word" } },
     has: (k) => !!spec.style?.palette?.[k],
-    brand, title: spec.meta.title, id, scene, t0, track, overlayScene,
+    brand, title: spec.meta.title, id, scene, t0, track, overlayScene, style: st?.id,
   };
 }
 

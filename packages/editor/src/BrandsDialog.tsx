@@ -150,8 +150,8 @@ export function BrandsDialog({ onClose, onChanged }: { onClose: () => void; onCh
                 <div key={slot} className="field br-font">
                   <span>{t_(slot === "display" ? "brandFontDisplay" : "brandFontBody")}</span>
                   <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <input list="br-fonts" placeholder="Google Font" value={draft.fonts?.[slot]?.family ?? ""} onChange={(e) => setFont(slot, e.target.value)} style={{ width: 150 }} />
-                    <select value={draft.fonts?.[slot]?.weight ?? ""} onChange={(e) => setWeight(slot, Number(e.target.value))} disabled={!draft.fonts?.[slot]} aria-label={t_("brandWeight")}>
+                    <input list="br-fonts" placeholder="Google Font" value={draft.fonts?.[slot]?.family ?? ""} onChange={(e) => setFont(slot, e.target.value)} style={{ width: 190 }} />
+                    <select style={{ width: 96 }} value={draft.fonts?.[slot]?.weight ?? ""} onChange={(e) => setWeight(slot, Number(e.target.value))} disabled={!draft.fonts?.[slot]} aria-label={t_("brandWeight")}>
                       <option value="">{t_("brandWeight")}</option>
                       {[300, 400, 500, 600, 700, 800, 900].map((w) => <option key={w} value={w}>{w}</option>)}
                     </select>
@@ -169,7 +169,7 @@ export function BrandsDialog({ onClose, onChanged }: { onClose: () => void; onCh
 
               <h3 className="br-h">{t_("brandBug")}</h3>
               <div className="field"><span>{t_("brandBugCorner")}</span>
-                <div className="seg" role="radiogroup" aria-label={t_("brandBugCorner")}>
+                <div className="seg" role="radiogroup" aria-label={t_("brandBugCorner")} style={{ minWidth: 230 }}>
                   {([[null, t_("off")], ["tl", "↖"], ["tr", "↗"], ["bl", "↙"], ["br", "↘"]] as [Corner | null, string][]).map(([c, label]) => (
                     <button key={String(c)} role="radio" aria-checked={(wm?.corner ?? null) === c} className={(wm?.corner ?? null) === c ? "on" : ""}
                       onClick={() => setDraft({ ...draft, watermark: c ? { corner: c, opacity: wm?.opacity ?? 0.85, size: wm?.size ?? 0.07 } : null })} disabled={!!c && !brand.logo} title={!brand.logo && c ? t_("brandBugNeedsLogo") : undefined}>{label}</button>

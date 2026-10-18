@@ -8,13 +8,17 @@
 
 **The open-source, self-hosted motion graphics studio where every element is a live-editable layer.**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-71%20passing-brightgreen.svg)](#-status)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architecture) [![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-90%20passing-brightgreen.svg)](#-status)
 
 *Describe your video, talk into your facecam or drop in files. The AI builds layers, you fine-tune them live, and out comes an MP4.*
 
 ![Showcase: built by Claude Code through the Open Motion MCP, unedited](docs/assets/showcase.gif)
 
 <sub>☝️ Built by Claude Code through the MCP in one go (brief → style "kinetic" → beat sheet → build → it looked at its own frames and fixed them → export). Not touched by hand. [MP4](docs/assets/showcase.mp4)</sub>
+
+<p align="center"><img src="docs/assets/showcase-reel.gif" alt="9:16 reel built by Claude Code with templates and a brand kit" width="260"></p>
+
+<sub>☝️ A 9:16 reel Claude Code built through the MCP from 5 templates in the brand "Nordlicht Studio" (a demo brand), then exported as MP4 and as transparent WebM. Not touched by hand.</sub>
 
 [Quickstart](#-quickstart) · [Features](#-features) · [Screenshots](#-screenshots) · [Architecture](#-architecture) · [Deploy with Coolify](docs/deploy-coolify.md) · [Guide](docs/guide.md) · [License](#-license)
 
@@ -36,11 +40,15 @@ On top of that you get what an explainer video needs: facecam recording in the b
 | **Swap content, keep the frame** | ❌ | ⚠️ tedious | ✅ graphic → AI image → video; position and animation stay |
 | **Facecam + transcript + text-based cutting** | ❌ | ⚠️ often extra software | ✅ built in; graphics hang on words and move when you cut |
 | **AI looks at its own result** | ❌ | ❌ | ✅ renders frames, scores them, fixes what is off (up to 2 rounds) |
-| **Choose your AI model** | ❌ vendor's model | ❌ | ✅ your Claude Code / Codex subscription or your own keys: Claude, OpenAI, OpenRouter; images via Kie.ai, OpenAI, OpenRouter, Gemini |
+| **Templates in your brand** | ⚠️ fixed looks | ⚠️ buy packs | ✅ 25 layout-tested scenes and overlays that follow your format, style, logo, colors and fonts |
+| **Overlays for other editors** | ❌ | ✅ | ✅ WebM/MOV with transparent background, Lottie (beta) |
+| **Choose your AI model** | ❌ vendor's model | ❌ | ✅ your Claude Code / Codex / OpenCode login or your own keys: Claude, OpenAI, OpenRouter; images via Kie.ai, OpenAI, OpenRouter, Gemini |
 | **Self-hosted, your data stays with you** | ❌ cloud | ✅ local | ✅ Docker + Coolify, one folder per project |
 | **Source code** | ❌ | ❌ mostly | ✅ AGPL-3.0 |
 
 **And "Claude Motion" or prompt-to-video skills?** Claude Motion (Anthropic, beta for Team/Enterprise) and the popular Remotion/HyperFrames skills turn a prompt into animation code and a video. That works, and the best prompt guides all say the same: name timed beats, exact colors and fonts, safe areas, and look at frames before the final render. Open Motion has these rules **built into its master prompt** and its 14 styles, so you don't have to write a 40-line prompt. The difference starts after the first render: here every element stays an editable layer, your facecam and transcript are part of the project, you can cut in the text, and a one-word fix changes one element instead of regenerating the clip. Runs on your computer, open source.
+
+**And Open Design / motion-anything?** [Open Design](https://open-design.ai) (with its engine motion-anything) is a strong open-source tool for short brand motion: title cards, logo outros, many templates, Lottie and React export. It does not work with a recording: no facecam, no transcript, no cutting in the text, no subtitles. Open Motion is built for exactly that, explainer videos with your face and voice, and now also has a brand kit, templates and transparent/Lottie export. If you only need a logo sting, both work; if you talk in your video, Open Motion is made for it.
 
 To be fair: describing animations as code and rendering them in a browser is not a new idea. What we add is everything that is missing when you only render: a layer model that AI **and** humans can edit at the same time, a live editor without reloads, a facecam workflow with text-based cutting, and rendering that tunes itself to your hardware.
 
@@ -55,9 +63,11 @@ To be fair: describing animations as code and rendering them in a browser is not
 - **Looks at its own work:** after a bigger build the AI gets rendered frames, scores hook, readability, layout and motion, and fixes what is below 8.
 - **Formats:** 16:9, 9:16 (Reels/TikTok/Shorts with platform safe areas), 1:1, 4:5.
 - **Motion engine:** text by word/letter/line, highlighter sweeps, counting numbers, self-drawing lines, mask and iris reveals, 3D tilt, blur, camera moves, glow/shadow/glass, grain/vignette/scanlines, springs. Google Fonts load automatically and are stored locally (no font requests to Google from the preview).
+- **Brand kit:** logo, colors, fonts (Google Fonts or your own files), tagline, website, handle and an optional logo bug in a corner. Several brands, one default for new videos, switch per project; switching off restores the look exactly.
+- **25 templates:** intro, title card, chapter, hook, statement, big number, stats, bar chart, list, steps, compare, quote, CTA, outro, YouTube end screen, countdown, checklist, timeline, plus overlays (lower third, callout, subscribe button, keyword, handle, circle, arrow). Live preview in your look before inserting; every text is fitted with measured font widths and checked in the browser in all formats.
 - **Subtitles in one click:** from the transcript, matching format and style, follow your cuts.
-- **Kie AI:** key in the settings with a credit display; a Kie MCP in Claude Code / Codex / Hermes is detected.
-- **No API key needed:** use your **Claude Code** or **Codex** subscription. Or let **Claude Code, Codex or Hermes** build the whole video via **MCP** while you watch it live in the editor.
+- **Kie AI:** key in the settings with a credit display; a Kie MCP in Claude Code / Codex / Hermes / OpenCode is detected.
+- **No API key needed:** use your **Claude Code**, **Codex** or **OpenCode** login. Or let **Claude Code, Codex, Hermes or OpenCode** build the whole video via **MCP** while you watch it live in the editor.
 - **One-line installer** for Linux, macOS and Windows: Node, FFmpeg, Whisper, start icon, AI tools connected.
 - **Comments on elements:** click an element, write "@AI make it green", done. Only that element changes.
 - **Facecam:** record in the browser or upload, audio on its own track, layout buttons (big, corner, circle, split) with smooth transitions.
@@ -65,7 +75,7 @@ To be fair: describing animations as code and rendering them in a browser is not
 - **Anchors:** graphics hang on spoken words.
 - **Text-based cutting:** deleting words cuts the video. Filler words and long pauses are suggested; audio gets click-free micro fades on export.
 - **AI images:** Kie.ai, OpenAI, OpenRouter or Gemini, saved locally right away.
-- **Export:** MP4 or GIF, 720p or 1080p, 15/30/60 fps, optional sharper text.
+- **Export:** MP4 or GIF, 720p or 1080p, 15/30/60 fps, optional sharper text. **WebM and MOV (ProRes 4444) with a transparent background** for overlays in Premiere, DaVinci or CapCut; background areas are detected and can be switched off. **Lottie (beta)** for apps and websites: every ease and transition comes out frame-exact, what Lottie cannot do (video, glow, blur, 3D) is listed after the export.
 - **Self-tuning rendering:** detects CPU, RAM and GPU (including container limits), plans render workers and learns from every export how long it really takes.
 - **Bilingual UI:** English and German, switchable.
 - **Self-hosted:** Docker image in `slim` and `whisper` variants, editor and render worker as separate services.
@@ -77,6 +87,8 @@ To be fair: describing animations as code and rendering them in a browser is not
 | [![Live editor](docs/assets/editor.png)](docs/assets/editor.png) | [![AI chat](docs/assets/ai-chat.png)](docs/assets/ai-chat.png) |
 | **Transcript & anchors** | **Text-based cutting** |
 | [![Transcript and anchors](docs/assets/transcript-anchors.png)](docs/assets/transcript-anchors.png) | [![Text-based cutting](docs/assets/text-cut.png)](docs/assets/text-cut.png) |
+| **Templates with live preview in your brand** | **Brand kit** |
+| [![Templates](docs/assets/templates.png)](docs/assets/templates.png) | [![Brand kit](docs/assets/brand.png)](docs/assets/brand.png) |
 
 <sub>The AI chat screenshot shows a staged conversation; the changes it lists were really applied to the project.</sub>
 
@@ -188,7 +200,7 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, backed by 71 automated tests and end-to-end runs in headless Chrome:**
+**Beta 0.1, backed by 90 automated tests and end-to-end runs in headless Chrome:**
 
 - [x] Layer core: spec, patches, compiler, render to MP4/GIF (checked frame by frame)
 - [x] Live editor: drag, resize, type, auto-keyframes, scenes, comments
@@ -203,7 +215,8 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 - [x] MCP server for Claude Code, Codex, Hermes, with live update in the editor (tested live with Claude Code)
 - [x] Styles, master prompt, interview form, voice input, AI follow-up questions, self-review with frames (tested live with Claude Code; the showcase above was made this way)
 - [x] Motion engine 2, formats 16:9 / 9:16 / 1:1 / 4:5, one-click subtitles (exported to MP4 and checked frame by frame)
-- [ ] Not tested live: Codex and Hermes (built against their docs), the self-review with Codex, Kie AI with a real key
+- [x] Brand kit, 25 templates, transparent WebM/MOV, Lottie (beta) (tested in a real browser: templates in all 14 styles × 4 formats incl. very long texts; Lottie compared frame by frame in lottie-web; alpha checked in the exported files)
+- [ ] Not tested live: Codex, Hermes and OpenCode with a real login (built against their docs, tested with simulated CLIs), the self-review with Codex, Kie AI with a real key
 - [ ] Live test of all AI, image and transcription APIs with real keys
 - [ ] Docker build confirmed on Coolify
 - [ ] Skill for claude.ai, Claude Code, Cowork and Hermes

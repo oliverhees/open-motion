@@ -1,4 +1,4 @@
-# 🤖 Open Motion with Claude Code, Codex and Hermes
+# 🤖 Open Motion with Claude Code, Codex, Hermes and OpenCode
 
 Two ways, both **without an API key**, using your subscription:
 
@@ -55,18 +55,19 @@ npm start                        # → http://localhost:4317
 
 ## 🅰️ Way A: subscription in the editor (chat, comments, graphics)
 
-✅ **The installer already set this up** if it found Claude Code or Codex.
+✅ **The installer already set this up** if it found Claude Code, Codex or OpenCode.
 
 1. Open the editor → **⚙ Settings**.
-2. Under **AI model** pick **Claude Code (subscription, no key)** or **Codex (subscription, no key)**.
-3. Leave the model empty to use the CLI's default, or enter e.g. `opus` / `sonnet`.
+2. Under **AI model** pick **Claude Code (subscription, no key)**, **Codex (subscription, no key)** or **OpenCode (your login, no key)**.
+3. Leave the model empty to use the CLI's default, or enter e.g. `opus` / `sonnet` (OpenCode: `provider/model`, e.g. `anthropic/claude-sonnet-4-5`).
 4. **Save** → 🩺 **Test now**.
 
 ✅ AI chat, comments ("@AI …") and "graphics from transcript" now use your subscription.
 
 **Good to know**
 
-- 🔒 The CLI gets **no tools** (Claude Code: all off; Codex: read-only). It only returns the change, and Open Motion validates it.
+- 🔒 The CLI gets **no tools** (Claude Code: all off; Codex: read-only; OpenCode: every tool denied, runs in an empty folder). It only returns the change, and Open Motion validates it.
+- 🔑 OpenCode uses whatever you logged in with once: `opencode auth login`.
 - 💳 If `ANTHROPIC_API_KEY` is set, Open Motion does **not** pass it to `claude`, so the subscription is always used.
 - 🖼️ **AI images** still need an image key (Kie.ai, OpenAI, OpenRouter or Gemini). Without one, let the AI draw SVG graphics.
 - 🎙️ **Transcript:** local with faster-whisper, no key.
@@ -113,6 +114,19 @@ mcp_servers:
 
 If your Hermes version supports MCP over HTTP, `url: "http://localhost:4317/mcp"` works too.
 
+### OpenCode
+
+Add to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "openmotion": { "type": "remote", "url": "http://localhost:4317/mcp", "enabled": true }
+  }
+}
+```
+
 ### 🎬 Example: explainer from an existing facecam recording
 
 > Use Open Motion. Create the project "AI tools explained". Import `/home/me/Videos/facecam.mp4` as facecam in the "corner" layout. Transcribe in English. Cut filler words and long pauses. Add a short title for every key statement, anchored to the matching word. Then give me the editor link.
@@ -129,7 +143,9 @@ Open the link. **Every change the AI makes shows up live in the editor within ab
 
 | Tool | What it does |
 | --- | --- |
-| `list_projects`, `create_project` | See and create projects (with format 16:9 / 9:16 / 1:1 / 4:5 and a style) |
+| `list_projects`, `create_project` | See and create projects (with format 16:9 / 9:16 / 1:1 / 4:5, a style and a brand; the default brand is applied automatically) |
+| `list_brands`, `apply_brand` | The user's brand kits (logo, colors, fonts, tagline, website, handle); put one on a project or take it off |
+| `list_templates`, `add_template` | 25 layout-tested scenes and overlays (intro, lower third, big number, chart, CTA, outro, end screen …) in the project's look |
 | `list_styles` | The 14 styles with fonts, palette and motion rules |
 | `get_project`, `get_spec` | Overview or the full Motion-Spec |
 | `spec_reference` | The master prompt: design laws, engine reference (text animation, masks, counters, drawing, 3D, camera, textures), recipes, self-check |
@@ -140,7 +156,7 @@ Open the link. **Every change the AI makes shows up live in the editor within ab
 | `apply_patch` | Any change, validated (on error nothing is saved and the message says why) |
 | `add_captions` | Subtitles from the transcript, matching format and style |
 | `look` | Renders frames and shows them to the AI as images, so it can judge and fix its own work |
-| `export_video` | Render MP4 or GIF, link via `job_status` |
+| `export_video` | Render MP4, GIF, **WebM/MOV with transparent background** or **Lottie (beta)**; link via `job_status` (for Lottie also what was left out) |
 | `editor_url` | Link to the project in the editor |
 
 ### 🔒 Security
@@ -168,6 +184,8 @@ Open the link. **Every change the AI makes shows up live in the editor within ab
 | Kie MCP detection | ✅ tested with config files; Kie credits with a real key not tested |
 | stdio bridge | ✅ protocol tested; **not** yet live with Codex or Hermes |
 | **Hermes** | ⚠️ not tested live. If the field names differ in your version, check the Hermes docs |
+| **OpenCode** | ⚠️ not tested with a real login: CLI tested with a simulated `opencode run --format json`, installer entry tested live (Linux) |
+| Brands, templates, export WebM/MOV/Lottie via MCP | ✅ tools tested; the same code paths as the editor, which was tested in a real browser |
 
 **Known limitations**
 

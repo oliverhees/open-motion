@@ -95,3 +95,7 @@ Transitions run on a separate box, so they never fight with keyframes on positio
 | `style`, `canvas`, `meta` | palette, fonts, format, title |
 | `transcript`, `word` | replace the transcript, fix a word |
 | `cut`, `uncut`, `cuts` | text-based cutting |
+| `camera` | camera moves over all non-fixed layers |
+| `template` | insert one of the 25 templates: `{"op":"template","id":"lowerthird","at":3.5,"values":{"name":"Mara","role":"Founder"}}` (scene templates add a scene after the one at `at`; overlays appear at `at`) |
+
+**Brand:** `meta.brand` holds the project's brand (name, logo path, tagline, website, handle, fonts) and what it replaced (`prev`), so `{"op":"meta","set":{"brand":null}}` alone is not a full undo; use the editor's "No brand" or the MCP tool `apply_brand` with `null`, which also restores palette and fonts.
