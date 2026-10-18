@@ -403,7 +403,8 @@ function textBody(layer: Extract<VisualLayer, { type: "text" }>, ctx: ContentCtx
   const st = layer.style;
   const segs: { text: string; hl: boolean }[] = [];
   layer.text.split(/\[\[|\]\]/).forEach((part, i) => { if (part) segs.push({ text: part, hl: i % 2 === 1 }); });
-  const hlColor = color(st.highlight ?? (ctx.palette.accent ? "$accent" : st.color ?? "#ffffff"), ctx.palette);
+  // With a marker behind the word, the word itself keeps the text color (accent on accent would vanish).
+  const hlColor = color(st.highlight ?? (st.marker ? st.color ?? "#ffffff" : ctx.palette.accent ? "$accent" : st.color ?? "#ffffff"), ctx.palette);
   const marker = st.marker ? color(st.marker, ctx.palette) : "";
   const hlStyle = (grow: boolean) =>
     `color:${hlColor}${marker ? `;background:linear-gradient(${marker},${marker}) no-repeat 0 88%/${grow ? "0%" : "100%"} 42%;-webkit-text-fill-color:${hlColor}` : ";-webkit-text-fill-color:" + hlColor}`;
