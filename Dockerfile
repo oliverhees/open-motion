@@ -51,6 +51,7 @@ COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node packages ./packages
 COPY --chown=node:node examples ./examples
 COPY --chown=node:node scripts ./scripts
+COPY --chown=node:node docs/motion-spec.md ./docs/motion-spec.md
 COPY --from=build --chown=node:node /app/packages/editor/dist ./packages/editor/dist
 RUN mkdir -p /data && chown node:node /data
 USER node
@@ -67,5 +68,5 @@ FROM runtime AS whisper
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir --break-system-packages faster-whisper==1.1.1
+    && pip3 install --no-cache-dir --break-system-packages faster-whisper==1.1.1 requests==2.34.2
 USER node

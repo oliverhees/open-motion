@@ -8,7 +8,7 @@
 
 **Das offene, selbst-hostbare Motion-Graphics-Studio, in dem jedes Element eine live editierbare Ebene ist.**
 
-[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-47%20gr%C3%BCn-brightgreen.svg)](#-status)
+[![Lizenz: AGPL v3](https://img.shields.io/badge/Lizenz-AGPL--3.0-blue.svg)](LICENSE) [![Status](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-status) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-architektur) [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Docker%20%2B%20Coolify-black.svg)](docs/de/coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20gr%C3%BCn-brightgreen.svg)](#-status)
 
 *Beschreib dein Video, sprich in die Facecam oder zieh Dateien rein. Die KI baut Ebenen, du feilst live nach, und am Ende kommt eine MP4 raus.*
 
@@ -43,6 +43,8 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 - **Live-Editor:** klicken, ziehen, skalieren, direkt in der Vorschau tippen. Wer am Abspielkopf etwas ändert, setzt automatisch einen Keyframe. Nur geänderte Ebenen werden neu gesetzt, ein Video lädt beim Verschieben nie neu.
 - **Szenen-Leiste und Tweaks:** Name, Länge und Tempo pro Szene, dazu alle Texte der Szene auf einen Blick.
 - **KI-Chat:** „Mach eine 20-Sekunden-Animation für mein Café" → Szenen, Texte, Grafiken, Bilder. Jede Antwort ist einzeln rückgängig zu machen.
+- **Kein API-Key nötig:** nutze dein **Claude-Code**- oder **Codex**-Abo. Oder lass **Claude Code, Codex oder Hermes** das ganze Video per **MCP** bauen, während du live im Editor zuschaust.
+- **Installer in einer Zeile** für Linux, macOS und Windows: Node, FFmpeg, Whisper, Start-Symbol, KI-Tools verbunden.
 - **Kommentare am Element:** Element anklicken, „@KI mach das grün" schreiben, fertig. Nur dieses Element ändert sich.
 - **Facecam:** Aufnahme im Browser oder Upload, Ton auf eigener Spur, Layout-Knöpfe (groß, Ecke, Kreis, Split) mit weichen Übergängen.
 - **Transkript mit Wortzeiten:** lokal mit faster-whisper oder über OpenAI, ElevenLabs, Groq, Deepgram.
@@ -70,7 +72,42 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 
 ## 🚀 Quickstart
 
-**Mit Docker (empfohlen):**
+**Auf deinem Rechner: eine Zeile, alles drin** (Node, FFmpeg, optional Whisper, Start-Symbol, Claude Code / Codex / Hermes verbunden). Keine Admin-Rechte, alles landet in einem Ordner.
+
+Linux und macOS (Terminal):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/oliverhees/open-motion/main/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oliverhees/open-motion/main/install.ps1 | iex"
+```
+
+Danach auf **Open Motion** klicken (Windows: Desktop / Startmenü; macOS: `Open Motion.command` auf dem Schreibtisch). Der Editor öffnet sich im Browser. Für ein Update die Zeile einfach nochmal ausführen, deine Projekte bleiben. Mehr: [Installer & KI-Tools](docs/de/mcp.md).
+
+> ⚠️ **Auf Linux komplett getestet** (Installation, Update, echtes Whisper-Transkript, MCP mit Claude Code, Export).
+> **macOS und Windows sind noch nicht getestet.** Sie sollten problemlos laufen (dasselbe Einrichtungsskript, offizielle Downloads pro System; die Download-Schritte für Windows sind in PowerShell geprüft). Falls etwas hakt, bitte ein [Issue](https://github.com/oliverhees/open-motion/issues) mit der Ausgabe des Installers anlegen.
+
+### 🎥 Dein erstes Video aus einer fertigen Facecam-Aufnahme
+
+**Im Editor** (ohne KI-Tool):
+
+1. Open Motion starten → **Neues Projekt**.
+2. Tab **Medien** → Aufnahme hochladen (oder auf die Bühne ziehen) → **Als Facecam** → Layout wählen.
+3. **Transkribieren** → **✂ Schnitt**: Füllwörter und Pausen mit **Alle anwenden** entfernen.
+4. **Grafiken aus Transkript** → Titel erscheinen an den passenden Wörtern.
+5. Feinschliff im Chat oder per Kommentar → **Export** → MP4.
+
+**Oder deine KI macht es** (Claude Code, Codex, Hermes, vom Installer verbunden):
+
+> Nutze Open Motion. Lege das Projekt „Mein Erklärvideo" an. Importiere `/home/ich/Videos/facecam.mp4` als Facecam im Layout „corner". Transkribiere auf Deutsch. Schneide Füllwörter und lange Pausen raus. Setze zu jeder Kernaussage einen kurzen Titel am passenden Wort. Gib mir den Editor-Link.
+
+Öffne den Link und schau live zu, wie das Video entsteht.
+
+**Mit Docker (für Server):**
 
 ```bash
 git clone https://github.com/oliverhees/open-motion.git
@@ -90,7 +127,7 @@ npm run editor:build
 npm start                       # → http://localhost:4317
 ```
 
-Danach: ⚙ Einstellungen → API-Keys eintragen → 🩺 **Jetzt testen**.
+Danach: ⚙ Einstellungen → Claude Code / Codex (Abo) wählen oder API-Keys eintragen → 🩺 **Jetzt testen**.
 
 **Auf deinem Server:** [Coolify-Anleitung Schritt für Schritt](docs/de/coolify.md)
 
@@ -120,7 +157,7 @@ packages/
   editor/   React-Oberfläche
 ```
 
-Mehr: [Handbuch](docs/de/handbuch.md) · [Motion-Spec-Referenz](docs/de/motion-spec.md)
+Mehr: [Handbuch](docs/de/handbuch.md) · [Motion-Spec-Referenz](docs/de/motion-spec.md) · [Claude Code, Codex, Hermes (MCP)](docs/de/mcp.md)
 
 ## 🛡️ Sicherheit
 
@@ -137,7 +174,7 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 
 ## 🔧 Status
 
-**Beta 0.1, abgesichert durch 47 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
+**Beta 0.1, abgesichert durch 55 automatische Tests und Ende-zu-Ende-Läufe in Headless-Chrome:**
 
 - [x] Ebenen-Kern: Spec, Patches, Compiler, Render zu MP4/GIF (Bild für Bild geprüft)
 - [x] Live-Editor: ziehen, skalieren, tippen, Auto-Keyframes, Szenen, Kommentare
@@ -148,9 +185,10 @@ Sicherheitslücke gefunden? Siehe [SECURITY.md](SECURITY.md).
 - [x] Login, API-Tokens, CSRF-Header, Brute-Force-Bremse
 - [x] Editor und Render-Worker als getrennte Prozesse mit gemeinsamer Warteschlange
 - [x] Selbstanpassendes Rendering mit lernender Zeitschätzung
+- [x] KI ohne API-Key: Claude Code und Codex mit deinem Abo (Claude Code live getestet, Codex simuliert)
+- [x] MCP-Server für Claude Code, Codex, Hermes, mit Live-Abgleich im Editor (live mit Claude Code getestet)
 - [ ] Live-Test aller KI-, Bild- und Transkriptions-APIs mit echten Keys
 - [ ] Docker-Build in Coolify bestätigt
-- [ ] MCP-Connector für Claude, Hermes und andere Agenten
 - [ ] Skill für claude.ai, Claude Code, Cowork und Hermes
 
 **Bekannte Grenzen:** KI-, Bild- und Transkriptions-APIs sind nach den Dokus und Antwortformaten der Anbieter gebaut; der Live-Test mit echten Keys läuft. Das Docker-Image folgt bewährten Mustern, muss sich in deiner Umgebung aber noch beweisen. Ganze Szenen folgen dem Text-Schnitt noch nicht. Es gibt ein Passwort für alle (noch keine Benutzerkonten). Einige Server-Meldungen sind noch deutsch. Videos von YouTube & Co. lassen sich nicht bildgenau einbetten; importiere sie als Datei.
@@ -159,7 +197,7 @@ Details: [STATUS.md](STATUS.md)
 
 ## 🗺️ Roadmap
 
-1. **MCP-Connector:** Claude (Web, Code, Cowork), Hermes und andere Agenten bauen Videos direkt auf deinem Server und schicken dir den Editor-Link.
+1. **MCP auf claude.ai:** den MCP-Server als Connector in Claude im Web und in Cowork verbinden (braucht OAuth).
 2. **Skill:** Designregeln, Spec-Spickzettel und Beispiele, damit jede KI gute Motion Graphics baut.
 3. **Szenen an Wörtern verankern:** Ganze Szenen folgen dem Text-Schnitt.
 4. **Profi-Timeline:** Spuren, Keyframe-Kurven, Tonspuren.

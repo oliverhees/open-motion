@@ -9,9 +9,10 @@ Open Motion: motion graphics as code. Every element is a layer (frame + content 
 ```
 packages/core/src     types, schema (zod), ease, timing, cuts, transitions, evaluate, patch, compile, presets, describe
 packages/render/src   build (HyperFrames project), render (export), hardware (planning + learning), cli
-packages/server/src   server (routes), auth, queue, worker, store, settings, media, transcribe, diagnose, ai/{agent,llm,images}
+packages/server/src   server (routes), auth, queue, worker, store, settings, media, transcribe, diagnose, mcp (+ mcp-stdio bridge), ai/{agent,llm,cli,images}
 packages/editor/src   App, Editor, Stage, preview (hot update), Panel, MediaTab, ChatPanel, dialogs, i18n
 examples/explainer    example spec + assets
+install.sh, install.ps1, scripts/install/setup.ts   one-line installer (same setup.ts on every OS)
 docs/                 guide, spec reference, Coolify deploy; docs/de = German versions
 ```
 

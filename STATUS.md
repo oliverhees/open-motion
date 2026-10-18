@@ -13,6 +13,9 @@ October 2026 · Beta 0.1
 | 4 AI | Chat, comments → changes, graphics from transcript, 4 image providers | Test mode + simulated provider responses |
 | Rendering | Hardware detection, worker planning, learning estimates | Unit tests + real render |
 | Docker | Login, API tokens, queue, app + worker separated | Two real processes end-to-end |
+| AI without key | Claude Code and Codex CLI as AI providers (your subscription) | Claude Code live; Codex with a simulated CLI |
+| Installer | One line for Linux, macOS, Windows: Node, FFmpeg, Whisper, start icon, AI tools connected | Linux end to end (install, update, Whisper, MCP, export); macOS/Windows not on real machines |
+| MCP | MCP server at /mcp + stdio bridge, live update in the editor | Claude Code live over HTTP, real browser; Codex/Hermes not live yet |
 
 ## 🔄 In progress
 
@@ -21,7 +24,8 @@ October 2026 · Beta 0.1
 
 ## 🗺️ Next
 
-- [ ] MCP connector (Claude web/Code/Cowork, Hermes, other agents)
+- [ ] Live test of Codex (subscription + MCP) and Hermes (MCP)
+- [ ] MCP on claude.ai web and Cowork (OAuth)
 - [ ] Skill (SKILL.md) for motion design with Open Motion
 - [ ] Scenes anchored to words (scenes follow text-based cuts)
 - [ ] Pro timeline (tracks, keyframe curves, audio tracks)

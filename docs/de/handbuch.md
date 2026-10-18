@@ -104,6 +104,8 @@ Modelle werden beim ersten Lauf nach `data/models/` geladen. Das Audio dekodiert
 
 Bilder werden immer sofort nach `assets/images/` heruntergeladen. Kie.ai löscht generierte Medien nach einiger Zeit.
 
+**🔑 Ohne API-Key, mit deinem Abo:** Als KI-Anbieter gehen auch **Claude Code** und **Codex**. Open Motion nutzt dann die angemeldete CLI auf deinem Rechner (nur ohne Docker). Und über den **MCP-Server** (`/mcp`) steuern Claude Code, Codex und Hermes Open Motion direkt. Anleitung: [Claude Code, Codex, Hermes](mcp.md).
+
 **Testmodus ohne Keys:** `OPENMOTION_FAKE_AI=1 npm start` liefert feste KI-Antworten und Platzhalterbilder. Damit lässt sich die Oberfläche testen (`npm run smoke:ai`).
 
 ## ⚙️ Rendern: passt sich selbst an

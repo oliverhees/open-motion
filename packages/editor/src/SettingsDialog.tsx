@@ -4,9 +4,10 @@ import { useT, type Key } from "./i18n.ts";
 
 const PROVIDERS: Provider[] = ["local", "openai", "elevenlabs", "groq", "deepgram"];
 const KEYED = ["anthropic", "openai", "openrouter", "kie", "gemini", "elevenlabs", "groq", "deepgram"] as const;
-const LLMS: LlmProvider[] = ["anthropic", "openai", "openrouter"];
+const LLMS: LlmProvider[] = ["claude-code", "codex", "anthropic", "openai", "openrouter"];
 const IMGS: ImageProvider[] = ["kie", "openai", "openrouter", "gemini"];
-const LLM_DEFAULTS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5" };
+const LLM_DEFAULTS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "" };
+const CLI_LLMS: LlmProvider[] = ["claude-code", "codex"];
 const IMG_DEFAULTS: Record<ImageProvider, string> = { kie: "gpt-image-2-text-to-image", openai: "gpt-image-1", openrouter: "google/gemini-2.5-flash-image", gemini: "gemini-2.5-flash-image" };
 const DEFAULT_MODELS: Record<Provider, string> = { local: "small", openai: "whisper-1", elevenlabs: "scribe_v1", groq: "whisper-large-v3-turbo", deepgram: "nova-3" };
 
@@ -71,6 +72,7 @@ export function SettingsDialog({ onClose, onSaved }: { onClose: () => void; onSa
             </select>
             <input value={s.ai.model ?? ""} placeholder={LLM_DEFAULTS[s.ai.provider]} onChange={(e) => setS({ ...s, ai: { ...s.ai, model: e.target.value } })} aria-label={t_("model")} />
           </div>
+          {CLI_LLMS.includes(s.ai.provider) && <p className="muted" style={{ margin: "4px 0 0" }}>{t_("cliNote")}</p>}
           <h3>{t_("imageModel")}</h3>
           <div className="pair">
             <select value={s.images.provider} onChange={(e) => setS({ ...s, images: { ...s.images, provider: e.target.value as ImageProvider, model: "" } })}>

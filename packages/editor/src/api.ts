@@ -7,7 +7,7 @@ export interface AgentResult { message: string; ops: import("@openmotion/core").
 export interface Asset { path: string; kind: "images" | "video" | "audio" | "fonts"; size: number; duration?: number; width?: number; height?: number; hasAudio?: boolean }
 export interface UploadResult extends Asset { converted: boolean; hasVideo: boolean }
 export type Provider = "local" | "openai" | "elevenlabs" | "groq" | "deepgram";
-export type LlmProvider = "anthropic" | "openai" | "openrouter";
+export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex";
 export type ImageProvider = "kie" | "openai" | "openrouter" | "gemini";
 export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }> }
 export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number }
@@ -30,6 +30,7 @@ export const api = {
   list: () => req<ProjectInfo[]>("/api/projects"),
   create: (title: string, template: "blank" | "example", lang?: string) => req<ProjectInfo>("/api/projects", { method: "POST", body: JSON.stringify({ title, template, lang }) }),
   read: (id: string) => req<{ project: ProjectInfo; spec: MotionSpec; comments: Comment[] }>(`/api/projects/${id}`),
+  rev: (id: string) => req<{ updatedAt: string }>(`/api/projects/${id}/rev`),
   saveSpec: (id: string, spec: MotionSpec) => req<{ warnings: string[]; updatedAt: string }>(`/api/projects/${id}/spec`, { method: "PUT", body: JSON.stringify(spec) }),
   saveComments: (id: string, comments: Comment[]) => req<{ ok: true }>(`/api/projects/${id}/comments`, { method: "PUT", body: JSON.stringify(comments) }),
   assets: (id: string) => req<Asset[]>(`/api/projects/${id}/assets`),

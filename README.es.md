@@ -8,7 +8,7 @@
 
 **El estudio de motion graphics de código abierto y autoalojado donde cada elemento es una capa editable en vivo.**
 
-[![Licencia: AGPL v3](https://img.shields.io/badge/Licencia-AGPL--3.0-blue.svg)](LICENSE) [![Estado](https://img.shields.io/badge/Estado-Beta%200.1-orange.svg)](#-estado) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-arquitectura) [![Autoalojado](https://img.shields.io/badge/Autoalojado-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-47%20superados-brightgreen.svg)](#-estado)
+[![Licencia: AGPL v3](https://img.shields.io/badge/Licencia-AGPL--3.0-blue.svg)](LICENSE) [![Estado](https://img.shields.io/badge/Estado-Beta%200.1-orange.svg)](#-estado) [![Stack](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-arquitectura) [![Autoalojado](https://img.shields.io/badge/Autoalojado-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![Tests](https://img.shields.io/badge/Tests-55%20superados-brightgreen.svg)](#-estado)
 
 *Describe tu vídeo, habla a tu facecam o arrastra archivos. La IA construye las capas, tú las ajustas en vivo y al final obtienes un MP4.*
 
@@ -127,7 +127,7 @@ Más: [Guía](docs/guide.md) · [Referencia de la Motion-Spec](docs/motion-spec.
 
 ## 🔧 Estado
 
-**Beta 0.1, respaldada por 47 tests automáticos y pruebas de extremo a extremo en Chrome sin interfaz.** Hecho: núcleo de capas, editor en vivo, grabación de facecam, transcripción local, corte por texto, agente de IA (modo de prueba y proveedores simulados), login y tokens, editor y worker separados, renderizado autoajustable. Pendiente: prueba en vivo de todas las APIs con claves reales, build de Docker confirmado en Coolify, conector MCP y Skill.
+**Beta 0.1, respaldada por 55 tests automáticos y pruebas de extremo a extremo en Chrome sin interfaz.** Hecho: núcleo de capas, editor en vivo, grabación de facecam, transcripción local, corte por texto, agente de IA (modo de prueba y proveedores simulados), login y tokens, editor y worker separados, renderizado autoajustable. Pendiente: prueba en vivo de todas las APIs con claves reales, build de Docker confirmado en Coolify, conector MCP y Skill.
 
 **Limitaciones conocidas:** las APIs de IA, imágenes y transcripción están construidas según la documentación y los formatos de respuesta de los proveedores; la prueba en vivo con claves reales está en curso. Las escenas completas aún no siguen los cortes por texto. Hay una sola contraseña para todos. Algunos mensajes del servidor siguen en alemán.
 

@@ -51,6 +51,10 @@ export function Editor({ id }: { id: string }) {
   const dragBase = useRef<MotionSpec | null>(null);
   const preview = useRef<Preview | null>(null);
   const lastSaved = useRef("");
+  const lastRev = useRef("");
+  const polling = useRef(false);
+  const tRef = useRef(t_);
+  tRef.current = t_;
 
   useEffect(() => {
     api.read(id).then((r) => {
@@ -59,6 +63,7 @@ export function Editor({ id }: { id: string }) {
       setComments(r.comments);
       hist.current = { list: [{ spec: r.spec, at: Date.now() }], i: 0 };
       lastSaved.current = JSON.stringify(r.spec);
+      lastRev.current = r.project.updatedAt;
     }).catch((e: Error) => setLoadError(e.message));
     api.assets(id).then(setAssets).catch(() => setAssets([]));
     api.capabilities().then(setCaps).catch(() => setCaps(null));
@@ -74,11 +79,42 @@ export function Editor({ id }: { id: string }) {
     if (json === lastSaved.current) return;
     setSave("saving");
     const h = setTimeout(() => {
-      api.saveSpec(id, s).then(() => { lastSaved.current = json; setSave("saved"); })
+      api.saveSpec(id, s).then((r) => { lastSaved.current = json; lastRev.current = r.updatedAt; setSave("saved"); })
         .catch((e: Error) => { setSave("error"); setToast(e.message); });
     }, 600);
     return () => clearTimeout(h);
   }, [dirty, id]);
+
+  // Changes from outside (AI via MCP, scripts): poll the revision, load the new spec when nothing local is pending.
+  useEffect(() => {
+    const h = setInterval(async () => {
+      const cur = specRef.current;
+      if (!cur || dragBase.current || polling.current || document.hidden || JSON.stringify(cur) !== lastSaved.current) return;
+      polling.current = true;
+      try {
+        const { updatedAt } = await api.rev(id);
+        if (updatedAt === lastRev.current) return;
+        const r = await api.read(id);
+        const json = JSON.stringify(r.spec);
+        const now = specRef.current;
+        if (!now || dragBase.current || JSON.stringify(now) !== lastSaved.current) return;
+        lastRev.current = r.project.updatedAt;
+        if (json === lastSaved.current) return;
+        const changed = r.spec.layers.filter((l) => JSON.stringify(now.layers.find((x) => x.id === l.id)) !== JSON.stringify(l)).map((l) => l.id);
+        lastSaved.current = json;
+        specRef.current = r.spec;
+        setSpec(r.spec);
+        push(r.spec);
+        api.assets(id).then(setAssets).catch(() => {});
+        setFlash(changed);
+        setTimeout(() => setFlash([]), 2600);
+        setToast(tRef.current("remoteUpdate"));
+      } catch { /* offline for a moment: try again next tick */ } finally {
+        polling.current = false;
+      }
+    }, 2000);
+    return () => clearInterval(h);
+  }, [id]);
 
   useEffect(() => {
     if (!toast) return;
