@@ -19,6 +19,8 @@ const FFPROBE_STATIC = "3.1.0";
 const UV = "0.12.21";
 const PYTHON = "3.12";
 const FASTER_WHISPER = "1.1.1";
+// faster-whisper 1.1.1 imports requests, newer huggingface_hub no longer brings it along.
+const REQUESTS = "2.34.2";
 const PORT = 4317;
 
 const win = process.platform === "win32";
@@ -146,7 +148,9 @@ async function whisper(): Promise<boolean> {
   }
   const uvEnv = { ...ENV, UV_PYTHON_INSTALL_DIR: path.join(HOME, "python"), UV_CACHE_DIR: path.join(HOME, "cache", "uv"), UV_NO_MODIFY_PATH: "1", UV_PYTHON_PREFERENCE: "only-managed" };
   await sh(uv, ["venv", "--quiet", "--allow-existing", "--python", PYTHON, VENV], { env: uvEnv, cwd: HOME });
-  await sh(uv, ["pip", "install", "--quiet", "--python", VENV_PY, `faster-whisper==${FASTER_WHISPER}`], { env: uvEnv, cwd: HOME });
+  await sh(uv, ["pip", "install", "--quiet", "--python", VENV_PY, `faster-whisper==${FASTER_WHISPER}`, `requests==${REQUESTS}`], { env: uvEnv, cwd: HOME });
+  const test = spawnSync(VENV_PY, ["-c", "import faster_whisper"], { encoding: "utf8" });
+  if (test.status !== 0) throw new Error(`Whisper: ${t("Installation unvollständig", "installation incomplete")}\n${(test.stderr ?? "").trim().slice(-600)}`);
   rmSync(path.join(HOME, "cache"), { recursive: true, force: true });
   ok(t("Whisper bereit (das Sprachmodell lädt beim ersten Transkript)", "Whisper ready (the speech model downloads on the first transcript)"));
   return true;

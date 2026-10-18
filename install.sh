@@ -42,7 +42,7 @@ main() {
   mkdir -p "$home"
   local tmp
   tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  trap "rm -rf '$tmp'" EXIT
 
   # 1. Node.js (own copy, checksum verified)
   if [ "$("$home/node/bin/node" -v 2>/dev/null || true)" != "v$NODE_VERSION" ]; then
