@@ -43,6 +43,8 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 - **Live-Editor:** klicken, ziehen, skalieren, direkt in der Vorschau tippen. Wer am Abspielkopf etwas ändert, setzt automatisch einen Keyframe. Nur geänderte Ebenen werden neu gesetzt, ein Video lädt beim Verschieben nie neu.
 - **Szenen-Leiste und Tweaks:** Name, Länge und Tempo pro Szene, dazu alle Texte der Szene auf einen Blick.
 - **KI-Chat:** „Mach eine 20-Sekunden-Animation für mein Café" → Szenen, Texte, Grafiken, Bilder. Jede Antwort ist einzeln rückgängig zu machen.
+- **Kein API-Key nötig:** nutze dein **Claude-Code**- oder **Codex**-Abo. Oder lass **Claude Code, Codex oder Hermes** das ganze Video per **MCP** bauen, während du live im Editor zuschaust.
+- **Installer in einer Zeile** für Linux, macOS und Windows: Node, FFmpeg, Whisper, Start-Symbol, KI-Tools verbunden.
 - **Kommentare am Element:** Element anklicken, „@KI mach das grün" schreiben, fertig. Nur dieses Element ändert sich.
 - **Facecam:** Aufnahme im Browser oder Upload, Ton auf eigener Spur, Layout-Knöpfe (groß, Ecke, Kreis, Split) mit weichen Übergängen.
 - **Transkript mit Wortzeiten:** lokal mit faster-whisper oder über OpenAI, ElevenLabs, Groq, Deepgram.
@@ -86,7 +88,24 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oli
 
 Danach auf **Open Motion** klicken (Windows: Desktop / Startmenü; macOS: `Open Motion.command` auf dem Schreibtisch). Der Editor öffnet sich im Browser. Für ein Update die Zeile einfach nochmal ausführen, deine Projekte bleiben. Mehr: [Installer & KI-Tools](docs/de/mcp.md).
 
-> Komplett getestet auf Linux (Installation, Update, echtes Whisper-Transkript, MCP mit Claude Code, Export). macOS und Windows: noch nicht auf echten Rechnern getestet; die Download-Schritte für Windows sind in PowerShell geprüft.
+> ⚠️ **Auf Linux komplett getestet** (Installation, Update, echtes Whisper-Transkript, MCP mit Claude Code, Export).
+> **macOS und Windows sind noch nicht getestet.** Sie sollten problemlos laufen (dasselbe Einrichtungsskript, offizielle Downloads pro System; die Download-Schritte für Windows sind in PowerShell geprüft). Falls etwas hakt, bitte ein [Issue](https://github.com/oliverhees/open-motion/issues) mit der Ausgabe des Installers anlegen.
+
+### 🎥 Dein erstes Video aus einer fertigen Facecam-Aufnahme
+
+**Im Editor** (ohne KI-Tool):
+
+1. Open Motion starten → **Neues Projekt**.
+2. Tab **Medien** → Aufnahme hochladen (oder auf die Bühne ziehen) → **Als Facecam** → Layout wählen.
+3. **Transkribieren** → **✂ Schnitt**: Füllwörter und Pausen mit **Alle anwenden** entfernen.
+4. **Grafiken aus Transkript** → Titel erscheinen an den passenden Wörtern.
+5. Feinschliff im Chat oder per Kommentar → **Export** → MP4.
+
+**Oder deine KI macht es** (Claude Code, Codex, Hermes, vom Installer verbunden):
+
+> Nutze Open Motion. Lege das Projekt „Mein Erklärvideo" an. Importiere `/home/ich/Videos/facecam.mp4` als Facecam im Layout „corner". Transkribiere auf Deutsch. Schneide Füllwörter und lange Pausen raus. Setze zu jeder Kernaussage einen kurzen Titel am passenden Wort. Gib mir den Editor-Link.
+
+Öffne den Link und schau live zu, wie das Video entsteht.
 
 **Mit Docker (für Server):**
 
