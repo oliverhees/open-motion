@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   applyPatch, compositionDuration, describe, facecamLayers, findSuggestions, isWordCut, sceneTimings, sourceToComp,
-  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp, LOTTIE_HINTS, type LottieWarningCode } from "@openmotion/core";
+  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp, LOTTIE_HINTS, type LottieWarningCode, TEMPLATES, templateDefaults } from "@openmotion/core";
 import { estimate } from "@openmotion/render";
 import type { ServerContext } from "./server.ts";
 import { HttpError } from "./store.ts";
@@ -36,7 +36,7 @@ Work like a top motion director:
 2. DIRECTION: read spec_reference and list_styles. Propose 3 directions (style id + one-line concept) and let the user pick, unless they already said what they want.
 3. SETUP: create_project with format and style (or set them) — list_brands first: if the user has a brand, it is applied automatically (logo, colors, fonts), use its logo in intro and outro. import_media + add_facecam for recordings, transcribe → job_status.
 4. BEAT SHEET: plan hook (0–1 s) → points (a new visual idea every 2–4 s) → payoff → end card, with times and a motion verb per element.
-5. BUILD with apply_patch (big batches are fine). For recordings: anchor graphics to words, captions, cut fillers.
+5. BUILD with apply_patch (big batches are fine). Use list_templates/add_template for standard beats (intro, lower third, big number, chart, list, CTA, outro, end screen): they are layout-tested in every format and follow style and brand; then customise their layers. For recordings: anchor graphics to words, captions, cut fillers.
 6. LOOK & FIX: call look (frames as images). Be a harsh motion director, not a proud author: score hook, readability at phone size, hierarchy, spacing/overlaps, safe area, pace, polish (1–10). Fix the 3 worst issues, look again, repeat until everything is ≥ 8.
 7. export_video → job_status → give the user the link.
 Images: if Open Motion has no image key (spec_reference says so) but you have an image MCP (e.g. Kie AI), generate the image there, save it, import_media it and use the asset path.`;
@@ -146,6 +146,25 @@ const TOOLS: Tool[] = [
       if (!Array.isArray(a.ops) || !a.ops.length) throw new Error('"ops" must be a non-empty array of patch operations.');
       return save(c, a.project, a.ops as PatchOp[]);
     },
+  },
+  {
+    name: "list_templates",
+    description: "Ready-made, layout-tested templates (scenes like intro, title, chapter, big number, bar chart, list, steps, compare, quote, CTA, outro, end screen, timeline; overlays like lower third, callout, subscribe, keyword, circle, arrow). They adapt to the project's format, style and brand. With project: the fields and their defaults for that project.",
+    inputSchema: obj({ project: { type: "string", description: "Optional: show defaults for this project" } }),
+    run: async (a, c) => {
+      const spec = a.project ? (await c.store.read(a.project)).spec : undefined;
+      return TEMPLATES.map((t) => {
+        const d = spec ? templateDefaults(spec, t.id) : {};
+        const fields = t.fields.map((f) => `${f.key}${f.type === "lines" ? " (one per line)" : ""}${spec ? `="${(d[f.key] ?? "").replace(/\n/g, "\\n")}"` : ""}`).join(", ");
+        return `${t.id} [${t.kind}, ${t.duration}s] ${t.name.en}: ${t.desc.en}${fields ? ` Fields: ${fields}` : ""}`;
+      }).join("\n");
+    },
+  },
+  {
+    name: "add_template",
+    description: "Insert a template at second `at`: scene templates become a new scene after the scene at `at` (or a full-screen card over a running recording), overlays appear at `at`. values = field texts (see list_templates; [[word]] highlights). Same as apply_patch with {\"op\":\"template\"}. Afterwards change any of its layers like normal layers.",
+    inputSchema: obj({ project, id: { type: "string" }, at: { type: "number" }, values: { type: "object", additionalProperties: { type: "string" } } }, ["project", "id"]),
+    run: async (a, c) => save(c, a.project, [{ op: "template", id: String(a.id), at: Number(a.at) || 0, values: a.values ?? {} } as PatchOp]),
   },
   {
     name: "import_media",

@@ -91,3 +91,65 @@ test("svg ids are scoped per layer: a pattern id equal to a layer box id still w
   assert.ok(html.includes("url(#om-svg-other-g)") && html.includes('href="#om-svg-other-g"'));
   assert.equal((html.match(/id="om-dots"/g) ?? []).length, 1, "only the layer box keeps om-dots");
 });
+
+test("templates: the template op builds a scene or an overlay in the project's look, ids stay unique, unknown ids explain themselves", async () => {
+  const { applyPatch, TEMPLATES, templateDefaults } = await import("@openmotion/core");
+  const spec = base([bg], { meta: { title: "T", lang: "de", style: "kinetic" } });
+  assert.ok(TEMPLATES.length >= 25, `${TEMPLATES.length} templates`);
+  // Scene template: a new scene after the current one, fonts of the style.
+  const a = applyPatch(spec, [{ op: "template", id: "title", at: 0.5, values: { title: "Hallo [[Welt]]" } }]).spec;
+  assert.equal(a.scenes.length, 2);
+  assert.equal(a.scenes[1].id, "title1");
+  const title = a.layers.find((l) => l.id === "title1-title");
+  assert.ok(title?.type === "text" && title.style.fontFamily === "Anton" && title.text.includes("[[Welt]]"));
+  assert.equal(title.scene, "title1");
+  // Twice: unique ids.
+  const b = applyPatch(a, [{ op: "template", id: "title", at: 0.5 }]).spec;
+  assert.ok(b.layers.some((l) => l.id === "title2-title"));
+  // Overlay at the playhead inside the current scene.
+  const c = applyPatch(spec, [{ op: "template", id: "lowerthird", at: 1, values: { name: "Oliver", role: "Gründer" } }]).spec;
+  const name = c.layers.find((l) => l.id === "lowerthird1-name");
+  assert.ok(name && name.scene === "s" && name.start >= 1);
+  // A recording running through: scene templates become a full-screen card over it, no new scene.
+  const rec = base([bg, { id: "cam", type: "video", track: 50, start: 0, duration: 20, frame: { x: 0, y: 0, w: 1920, h: 1080 }, src: "assets/v.mp4" }], { scenes: [{ id: "s", name: "s", duration: 20 }] });
+  const d = applyPatch(rec, [{ op: "template", id: "quote", at: 5 }]).spec;
+  assert.equal(d.scenes.length, 1);
+  assert.ok(d.layers.some((l) => l.id === "quote1-bg" && l.track > 50), "own background above the recording");
+  // Brand-aware defaults.
+  const branded = { ...spec, meta: { ...spec.meta, brand: { id: "b", name: "AIIANER", handle: "@aiianer", website: "aiianer.de" } } };
+  assert.equal(templateDefaults(branded, "outro").handle, "@aiianer");
+  assert.throws(() => applyPatch(spec, [{ op: "template", id: "nope" }]), /Unknown template "nope". Available: intro, title/);
+});
+
+test("fitText: shrinks before it overflows, hyphenates words too long for a line, keeps [[highlights]] intact per line", async () => {
+  const { fitText } = await import("@openmotion/core");
+  const a = fitText("Kurz", 1000, 200, 120, 40, 0.6, 1.04);
+  assert.equal(a.size, 120);
+  const b = fitText("Ein deutlich längerer Text, der umbrechen muss", 600, 400, 120, 40, 0.6, 1.04);
+  assert.ok(b.size < 120 && b.lines > 1 && b.lines * b.size * 1.04 <= 400);
+  const c = fitText("Datenschutzgrundverordnung", 300, 400, 100, 60, 0.6, 1.04);
+  assert.match(c.text, /-\n/, "hyphenated");
+  const d = fitText("Das ist [[wirklich sehr wichtig]] heute", 420, 600, 80, 20, 0.6, 1.04);
+  for (const line of d.text.split("\n")) assert.equal((line.match(/\[\[/g) ?? []).length, (line.match(/\]\]/g) ?? []).length, `balanced: ${line}`);
+});
+
+test("templates work on any project: every template on the example (own palette without $surface/$muted, a recording) stays a valid spec", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { applyPatch, TEMPLATES } = await import("@openmotion/core");
+  const example = JSON.parse(readFileSync(new URL("../../../examples/explainer/spec.json", import.meta.url), "utf8"));
+  for (const t of TEMPLATES) {
+    const r = applyPatch(example, [{ op: "template", id: t.id, at: 3 }]);
+    assert.ok(r.spec.layers.length > example.layers.length, t.id);
+    assert.ok(!JSON.stringify(r.spec.layers).includes("$surface"), `${t.id}: missing tokens replaced`);
+  }
+});
+
+test("templates: an overlay near the end of a scene is shortened to fit (≥ 2 s left), very close to the end the scene grows", async () => {
+  const { applyPatch } = await import("@openmotion/core");
+  const spec = base([bg], { scenes: [{ id: "s", name: "s", duration: 5 }] });
+  const a = applyPatch(spec, [{ op: "template", id: "lowerthird", at: 2.5 }]).spec;
+  assert.equal(a.scenes[0].duration, 5, "scene unchanged");
+  for (const l of a.layers.filter((x) => x.id.startsWith("lowerthird1-"))) assert.ok(l.start + l.duration <= 5 + 1e-6, `${l.id} ends in the scene`);
+  const b = applyPatch(spec, [{ op: "template", id: "lowerthird", at: 4.2 }]).spec;
+  assert.ok(b.scenes[0].duration > 8, "scene extended when less than 2 s are left");
+});

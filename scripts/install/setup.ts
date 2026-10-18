@@ -3,7 +3,7 @@
 // Same steps on Linux, macOS and Windows, everything inside one folder (no admin rights):
 //   <home>/node      Node.js        <home>/app     Open Motion       <home>/bin    ffmpeg, ffprobe
 //   <home>/venv      Python + faster-whisper (optional)               <home>/data   your projects
-// Then: start command + shortcut, Claude Code / Codex / Hermes connected via MCP.
+// Then: start command + shortcut, Claude Code / Codex / Hermes / OpenCode connected via MCP.
 //
 //   node scripts/install/setup.ts --home <dir>     OM_WHISPER=1|0 answers the Whisper question
 
@@ -233,7 +233,7 @@ function launcher(withWhisper: boolean): string {
   return start;
 }
 
-// ---------- 6. Connect Claude Code, Codex, Hermes ----------
+// ---------- 6. Connect Claude Code, Codex, Hermes, OpenCode ----------
 async function connect(): Promise<string[]> {
   step(6, t("KI-Tools verbinden (MCP)", "Connecting AI tools (MCP)"));
   const url = `http://127.0.0.1:${PORT}/mcp`;
@@ -273,7 +273,27 @@ async function connect(): Promise<string[]> {
     else { mkdirSync(hermesDir, { recursive: true }); writeFileSync(file, `${cur}${cur && !cur.endsWith("\n") ? "\n" : ""}mcp_servers:\n${entry}`); ok("Hermes"); }
   }
 
-  if (!claude && !found.includes("codex") && !existsSync(hermesDir)) console.log(t("  Keine KI-Tools gefunden. Später installieren und den Installer erneut starten.", "  No AI tools found. Install them later and run the installer again."));
+  // OpenCode: remote MCP entry in ~/.config/opencode/opencode.json (a .jsonc with comments is left alone).
+  const ocDir = path.join(os.homedir(), ".config", "opencode");
+  if (which("opencode") || existsSync(ocDir)) {
+    const file = path.join(ocDir, "opencode.json");
+    const entry = { type: "remote", url, enabled: true };
+    if (existsSync(path.join(ocDir, "opencode.jsonc")) && !existsSync(file)) warn(t(`OpenCode: bitte in ${path.join(ocDir, "opencode.jsonc")} unter "mcp" eintragen: "openmotion": ${JSON.stringify(entry)}`, `OpenCode: please add under "mcp" in ${path.join(ocDir, "opencode.jsonc")}: "openmotion": ${JSON.stringify(entry)}`));
+    else {
+      try {
+        const cur = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) as { mcp?: Record<string, unknown> } : { $schema: "https://opencode.ai/config.json" };
+        cur.mcp = { ...(cur.mcp ?? {}), openmotion: entry };
+        mkdirSync(ocDir, { recursive: true });
+        writeFileSync(file, JSON.stringify(cur, null, 2) + "\n");
+        ok("OpenCode");
+      } catch {
+        warn(t(`OpenCode: ${file} ist kein gültiges JSON. Bitte unter "mcp" eintragen: "openmotion": ${JSON.stringify(entry)}`, `OpenCode: ${file} is not valid JSON. Please add under "mcp": "openmotion": ${JSON.stringify(entry)}`));
+      }
+    }
+    if (which("opencode")) found.push("opencode");
+  }
+
+  if (!claude && !found.includes("codex") && !found.includes("opencode") && !existsSync(hermesDir)) console.log(t("  Keine KI-Tools gefunden. Später installieren und den Installer erneut starten.", "  No AI tools found. Install them later and run the installer again."));
   return found;
 }
 
@@ -283,10 +303,12 @@ async function defaults(found: string[]) {
   const store = new SettingsStore(DATA);
   const s = await store.read();
   const hasKey = !!s.keys[s.ai.provider];
-  const cli = found.find((f) => f === "claude-code" || f === "codex");
-  if (cli && !hasKey && s.ai.provider !== "codex" && s.ai.provider !== "claude-code") {
+  // Preference: Claude Code, then Codex, then OpenCode.
+  const cli = ["claude-code", "codex", "opencode"].find((f) => found.includes(f));
+  const label = (c: string) => (c === "codex" ? "Codex" : c === "opencode" ? "OpenCode" : "Claude Code");
+  if (cli && !hasKey && !["codex", "claude-code", "opencode"].includes(s.ai.provider)) {
     await store.update({ ai: { provider: cli, model: "" } });
-    ok(t(`Editor-KI nutzt dein Abo: ${cli === "codex" ? "Codex" : "Claude Code"}`, `Editor AI uses your subscription: ${cli === "codex" ? "Codex" : "Claude Code"}`));
+    ok(t(`Editor-KI nutzt dein Abo: ${label(cli)}`, `Editor AI uses your subscription: ${label(cli)}`));
   }
 }
 

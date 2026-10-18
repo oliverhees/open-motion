@@ -16,7 +16,7 @@ export interface AgentResult {
 export interface Asset { path: string; kind: "images" | "video" | "audio" | "fonts"; size: number; duration?: number; width?: number; height?: number; hasAudio?: boolean }
 export interface UploadResult extends Asset { converted: boolean; hasVideo: boolean }
 export type Provider = "local" | "openai" | "elevenlabs" | "groq" | "deepgram";
-export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex";
+export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex" | "opencode";
 export type ImageProvider = "kie" | "openai" | "openrouter" | "gemini";
 export type BrandInput = Partial<Omit<Brand, "id" | "logo" | "logoAspect">>;
 export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string; review?: boolean }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }>; brand?: string }

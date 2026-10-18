@@ -8,12 +8,12 @@ import path from "node:path";
 export const PROVIDERS = ["local", "openai", "elevenlabs", "groq", "deepgram"] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const KEY_NAMES = ["openai", "elevenlabs", "groq", "deepgram", "anthropic", "openrouter", "gemini", "kie"] as const;
-export const LLM_PROVIDERS = ["anthropic", "openai", "openrouter", "claude-code", "codex"] as const;
+export const LLM_PROVIDERS = ["anthropic", "openai", "openrouter", "claude-code", "codex", "opencode"] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 export const IMAGE_PROVIDERS = ["kie", "openai", "openrouter", "gemini"] as const;
 export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
-/** CLI providers ("claude-code", "codex") use your subscription; empty model = the CLI's own default. */
-export const DEFAULT_LLM_MODELS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "" };
+/** CLI providers ("claude-code", "codex", "opencode") use your subscription/login; empty model = the CLI's own default. */
+export const DEFAULT_LLM_MODELS: Record<LlmProvider, string> = { anthropic: "claude-sonnet-5-5", openai: "gpt-5", openrouter: "anthropic/claude-sonnet-5.5", "claude-code": "", codex: "", opencode: "" };
 export const DEFAULT_IMAGE_MODELS: Record<ImageProvider, string> = { kie: "gpt-image-2-text-to-image", openai: "gpt-image-1", openrouter: "google/gemini-2.5-flash-image", gemini: "gemini-2.5-flash-image" };
 export type KeyName = (typeof KEY_NAMES)[number];
 

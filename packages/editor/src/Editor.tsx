@@ -626,7 +626,7 @@ export function Editor({ id }: { id: string }) {
       <Panel spec={spec} t={t} selected={selected} tab={tab} setTab={setTab} apply={apply} seek={seek} select={setSelected}
         assets={assets} comments={comments} saveComments={saveComments} currentSceneId={currentScene?.id}
         onGenerateImage={(lid, prompt) => void genImage(lid, prompt)} imgBusy={imgBusy}
-        brands={brands} onBrand={(b) => void setBrand(b)} onManageBrands={() => setShowBrands(true)} brandBusy={brandBusy}
+        projectId={id} brands={brands} onBrand={(b) => void setBrand(b)} onManageBrands={() => setShowBrands(true)} brandBusy={brandBusy}
         media={{ uploads, stt, caps, defaultProvider: settings?.transcription.provider ?? "local", defaultLanguage: settings?.transcription.language ?? "auto",
           onUpload: (f) => void uploadFiles(f), onRecord: () => setShowRecord(true), onAdd: (a, as) => addAsset(a, as),
           onTranscribe: (src, pr, lang) => void runTranscribe(src, pr, lang),

@@ -489,7 +489,9 @@ function countBody(layer: Extract<VisualLayer, { type: "text" }>, cid: string, c
     ? `counter-reset:omi var(${prop})`
     : `counter-reset:omi round(down, calc(var(${prop}) / ${f}), 1) omf mod(var(${prop}), ${f})`;
   const shown = dec === 0 || neg ? "counter(omi)" : `counter(omi) ${cssString(point)} counter(omf${dec === 2 ? ", decimal-leading-zero" : ""})`;
-  const contentCss = `${cssString(c.prefix ?? "")} ${shown} ${cssString(c.suffix ?? "")}`;
+  // Non-breaking spaces: "98 %" must never wrap between the number and its unit.
+  const nb = (v: string) => cssString(v.replace(/ /g, "\u00a0"));
+  const contentCss = `${nb(c.prefix ?? "")} ${shown} ${nb(c.suffix ?? "")}`;
   const { timing } = ctx;
   const delay = timing.start + (c.delay ?? 0) / timing.speed;
   const scaled = (v: number) => Math.round(v * (neg ? 1 : f));

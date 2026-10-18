@@ -3,7 +3,7 @@
 // Built from HeyGen's open HyperFrames motion rules, the Remotion skills and what works in the
 // best shared Claude motion prompts (see docs/mcp.md for sources).
 
-import { getStyle, STYLES, styleBrief, type MotionSpec, WATERMARK_ID } from "@openmotion/core";
+import { getStyle, STYLES, styleBrief, TEMPLATES, type MotionSpec, WATERMARK_ID } from "@openmotion/core";
 
 /** Safe areas per format (px from the edge) where key text must stay inside. */
 export function formatNotes(spec: MotionSpec): string {
@@ -91,6 +91,8 @@ OPERATIONS
 {"op":"style","set":{"palette":{…}}} · {"op":"canvas","set":{"background":"$bg"}} · {"op":"meta","set":{"style":"<id>","brief":"…"}} · {"op":"camera","set":{…}|null}
 {"op":"cut","t0":1.2,"t1":1.6,"reason":"filler"} · {"op":"uncut",…} · {"op":"word","id":"w12","text":"fixed"} (transcript times = seconds in the ORIGINAL recording)
 Layers in a scene: "scene":"<id>" and "start" relative to the scene. Layers about something said: "anchor" on the word (offset ≈ -0.2).
+TEMPLATES (layout-tested in every format, follow style + brand; then change their layers like any other): {"op":"template","id":"<id>","at":<seconds>,"values":{"<field>":"…"}}. Scene templates add a scene after the one at "at" (with a running recording: a full-screen card over it); overlays appear at "at". Use them for standard beats instead of building from scratch:
+${TEMPLATES.map((t) => `${t.id} (${t.kind}, ${t.duration}s${t.fields.length ? `: ${t.fields.map((f) => f.key).join(", ")}` : ""})`).join(" · ")}
 
 ═══ RECIPES (named moves → JSON) ═══
 mask-headline: text + "anim":{"type":"mask","by":"word","stagger":0.07,"duration":0.7,"ease":"expo.out"}

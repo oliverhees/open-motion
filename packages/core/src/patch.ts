@@ -9,6 +9,7 @@ import { SpecError, validateSpec } from "./schema.ts";
 import { layerTiming, toRel } from "./timing.ts";
 import { baseValue, propAt } from "./evaluate.ts";
 import { normalizeCuts, subtractCut } from "./cuts.ts";
+import { templateOps } from "./templates.ts";
 import { ANIM_PROPS, isVisual, type AnimProp, type Ease, type Layer, type MotionSpec, type Scene, type VisualLayer } from "./types.ts";
 
 export type PatchOp =
@@ -43,7 +44,9 @@ export type PatchOp =
   | { op: "cut"; t0: number; t1: number; reason?: "manual" | "filler" | "pause" }
   /** Restore a range (removes it from the cuts). */
   | { op: "uncut"; t0: number; t1: number }
-  | { op: "cuts"; set: { t0: number; t1: number; reason?: "manual" | "filler" | "pause" }[] };
+  | { op: "cuts"; set: { t0: number; t1: number; reason?: "manual" | "filler" | "pause" }[] }
+  /** Insert a ready-made template (see TEMPLATES) at composition time `at`: a scene or an overlay, in the project's look. */
+  | { op: "template"; id: string; at?: number; values?: Record<string, string> };
 
 export interface PatchResult {
   spec: MotionSpec;
@@ -80,6 +83,16 @@ function applyOne(spec: MotionSpec, op: PatchOp, i: number, changed: Set<string>
     return idx;
   };
 
+  if (op.op === "template") {
+    let r: ReturnType<typeof templateOps>;
+    try {
+      r = templateOps(spec, op.id, op.values ?? {}, op.at ?? 0);
+    } catch (e) {
+      throw new PatchError(i, (e as Error).message);
+    }
+    for (const sub of r.ops) applyOne(spec, sub, i, changed);
+    return;
+  }
   switch (op.op) {
     case "set": {
       const idx = find(op.id);

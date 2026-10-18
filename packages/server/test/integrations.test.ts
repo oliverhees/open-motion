@@ -26,3 +26,23 @@ test("integrations: finds MCP servers of Claude Code, Codex and Hermes (names on
   assert.equal(imagesAvailable(s), false);
   assert.equal(imagesAvailable({ ...(s as object), keys: { kie: "k" } } as never), true);
 });
+
+test("integrations: OpenCode MCP servers from opencode.json(c), comments and trailing commas tolerated", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "om-oc-"));
+  await mkdir(path.join(home, ".config", "opencode"), { recursive: true });
+  await writeFile(path.join(home, ".config", "opencode", "opencode.jsonc"), `{
+  // my servers
+  "mcp": {
+    "kie-ai": { "type": "remote", "url": "https://x", },
+    "openmotion": { "type": "remote", "url": "http://127.0.0.1:4317/mcp" },
+  },
+}`);
+  const saved = process.env.XDG_CONFIG_HOME;
+  delete process.env.XDG_CONFIG_HOME;
+  try {
+    const found = localMcps(home).filter((m) => m.tool === "OpenCode").map((m) => m.name).sort();
+    assert.deepEqual(found, ["kie-ai", "openmotion"]);
+  } finally {
+    if (saved !== undefined) process.env.XDG_CONFIG_HOME = saved;
+  }
+});

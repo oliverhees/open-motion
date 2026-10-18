@@ -3,11 +3,12 @@ import { facecamFrame, layerTiming, sceneTimings, valueAt, type AnimProp, type F
 import { fmtTime, type Asset, type Comment } from "./api.ts";
 import type { Brand } from "@openmotion/core";
 import { MediaTab } from "./MediaTab.tsx";
+import { TemplatesTab } from "./TemplatesTab.tsx";
 import type { ComponentProps } from "react";
 import { useT, type Key } from "./i18n.ts";
 import { IBack, IDiamond, IDown, IEye, IEyeOff, ILock, INext, ITrash, IUnlock, IUp } from "./icons.tsx";
 
-export type Tab = "tweaks" | "layers" | "media" | "style" | "comments";
+export type Tab = "tweaks" | "layers" | "media" | "templates" | "style" | "comments";
 type Apply = (ops: PatchOp[], key?: string) => void;
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   media: Omit<ComponentProps<typeof MediaTab>, "spec" | "t" | "selected" | "assets" | "apply" | "seek">;
   onGenerateImage: (layerId: string, prompt: string) => void;
   imgBusy: { id: string; started: number } | null;
+  projectId: string;
   brands: Brand[]; onBrand: (id: string | null) => void; onManageBrands: () => void; brandBusy: boolean;
 }
 
@@ -30,7 +32,7 @@ export function Panel(p: Props) {
   return (
     <aside className="side">
       <nav className="tabs" role="tablist">
-        {(["tweaks", "layers", "media", "style", "comments"] as const).map((k) => (
+        {(["tweaks", "layers", "media", "templates", "style", "comments"] as const).map((k) => (
           <button key={k} role="tab" aria-selected={p.tab === k} className={p.tab === k ? "on" : ""} onClick={() => p.setTab(k)}>
             {t_(`tab${k[0].toUpperCase()}${k.slice(1)}` as Key)}{k === "comments" && open ? ` (${open})` : ""}
           </button>
@@ -40,6 +42,7 @@ export function Panel(p: Props) {
         {p.tab === "tweaks" && <><SceneSection {...p} /><LayerSection {...p} /></>}
         {p.tab === "layers" && <LayersTab {...p} />}
         {p.tab === "media" && <MediaTab spec={p.spec} t={p.t} selected={p.selected} assets={p.assets} apply={p.apply} seek={p.seek} {...p.media} />}
+        {p.tab === "templates" && <TemplatesTab spec={p.spec} t={p.t} projectId={p.projectId} apply={p.apply} seek={p.seek} select={p.select} />}
         {p.tab === "style" && <StyleTab {...p} />}
         {p.tab === "comments" && <CommentsTab {...p} />}
       </div>

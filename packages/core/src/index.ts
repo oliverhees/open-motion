@@ -14,3 +14,4 @@ export { STYLES, FORMATS, FORMAT_SIZE, getStyle, styleBrief, type StyleDef, type
 export { toLottie, parseColor, LOTTIE_HINTS, type LottieOptions, type LottieResult, type LottieWarning, type LottieWarningCode } from "./lottie.ts";
 export { backgroundLayers, type BackgroundCandidate } from "./overlay.ts";
 export { brandOps, unbrandOps, brandPalette, syncWatermark, WATERMARK_ID, type Brand, type BrandColors, type BrandFont, type BrandMeta, type Corner } from "./brand.ts";
+export { TEMPLATES, getTemplate, templateOps, templateDefaults, fitText, type TemplateDef, type TemplateField, type TemplateKind } from "./templates.ts";
