@@ -238,7 +238,8 @@ async function connect(): Promise<string[]> {
 
   const claude = which("claude");
   if (claude) {
-    const run = (args: string[]) => spawnSync(claude, args, { encoding: "utf8", shell: win, env: ENV });
+    // Windows: claude is a .cmd, which needs a shell; quote the path (user names with spaces).
+    const run = (args: string[]) => spawnSync(win ? `"${claude}"` : claude, args, { encoding: "utf8", shell: win, env: ENV });
     run(["mcp", "remove", "--scope", "user", "openmotion"]);
     const r = run(["mcp", "add", "--scope", "user", "--transport", "http", "openmotion", url]);
     if (r.status === 0) { ok("Claude Code"); found.push("claude-code"); } else warn(`Claude Code: ${(r.stderr || r.stdout || "").trim().slice(0, 200)}`);

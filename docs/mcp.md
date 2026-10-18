@@ -11,32 +11,51 @@ Both run **on your own computer, without Docker**. The CLIs are not available in
 
 ---
 
-## 🧰 Setup (once)
+## 🧰 Installation (once)
 
-1. Install **Node 22.18+**, **FFmpeg** and **Python 3**.
-2. Get Open Motion and start it:
+**Linux and macOS** (Terminal):
 
-   ```bash
-   git clone https://github.com/oliverhees/open-motion.git
-   cd open-motion
-   npm install
-   npx hyperframes browser ensure   # Chrome for the export
-   pip install faster-whisper       # free local transcription
-   npm run editor:build
-   npm start                        # → http://localhost:4317
-   ```
+```bash
+curl -fsSL https://raw.githubusercontent.com/oliverhees/open-motion/main/install.sh | bash
+```
 
-3. Install the CLI and **log in once**:
+**Windows** (PowerShell):
 
-   | Tool | Install | Log in |
-   | --- | --- | --- |
-   | Claude Code | `npm install -g @anthropic-ai/claude-code` | `claude`, then `/login` |
-   | Codex | `npm install -g @openai/codex` | `codex login` |
-   | Hermes | see the Hermes docs | see the Hermes docs |
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oliverhees/open-motion/main/install.ps1 | iex"
+```
+
+The installer does everything on its own, without admin rights:
+
+- 📦 Node, FFmpeg and Open Motion in **one** folder (`~/.openmotion`, Windows: `%LOCALAPPDATA%\OpenMotion`)
+- 🎙️ asks whether to install **Whisper** (free transcripts, about 1 GB, brings its own Python)
+- ▶️ creates a **start icon** (Linux: applications menu, macOS: desktop, Windows: desktop + Start menu) and the `openmotion` command
+- 🤖 finds **Claude Code, Codex and Hermes** and connects them via MCP; the editor chat then uses your subscription
+- 🔒 Open Motion is then only reachable from your computer, not from the network
+
+**Important:** install Claude Code, Codex or Hermes first and log in once (`claude` → `/login`, `codex login`). Added them later? Just run the installer again.
+
+🔄 **Update:** run the same line again. Your projects stay. · 🗑️ **Uninstall:** delete the folder.
+
+<details><summary>Without the installer (developers)</summary>
+
+```bash
+git clone https://github.com/oliverhees/open-motion.git
+cd open-motion
+npm install
+npx hyperframes browser ensure
+pip install faster-whisper requests
+npm run editor:build
+npm start                        # → http://localhost:4317
+```
+
+</details>
 
 ---
 
 ## 🅰️ Way A: subscription in the editor (chat, comments, graphics)
+
+✅ **The installer already set this up** if it found Claude Code or Codex.
 
 1. Open the editor → **⚙ Settings**.
 2. Under **AI model** pick **Claude Code (subscription, no key)** or **Codex (subscription, no key)**.
@@ -56,7 +75,9 @@ Both run **on your own computer, without Docker**. The CLIs are not available in
 
 ## 🅱️ Way B: MCP (the AI builds the video for you)
 
-Open Motion includes an MCP server at **`http://localhost:4317/mcp`**. It starts with `npm start`.
+Open Motion includes an MCP server at **`http://localhost:4317/mcp`**. It starts with Open Motion.
+
+✅ **The installer already did this.** You only need the entries below without the installer.
 
 ### Claude Code
 
@@ -127,6 +148,8 @@ Open the link. **Every change the AI makes shows up live in the editor within ab
 
 | Part | Status |
 | --- | --- |
+| **Installer Linux** | ✅ tested live: install, update, real Whisper transcript, MCP with Claude Code, export |
+| **Installer macOS / Windows** | ⚠️ not tested on real machines; Windows download steps checked in PowerShell |
 | Way A with **Claude Code** | ✅ tested live (real CLI, valid change on the example project) |
 | Way A with **Codex** | ⚠️ tested with a simulated CLI only, not live |
 | Way B with **Claude Code** over HTTP | ✅ tested live (create project, import and add facecam, add title) |

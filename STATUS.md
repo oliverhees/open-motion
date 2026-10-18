@@ -14,6 +14,7 @@ October 2026 · Beta 0.1
 | Rendering | Hardware detection, worker planning, learning estimates | Unit tests + real render |
 | Docker | Login, API tokens, queue, app + worker separated | Two real processes end-to-end |
 | AI without key | Claude Code and Codex CLI as AI providers (your subscription) | Claude Code live; Codex with a simulated CLI |
+| Installer | One line for Linux, macOS, Windows: Node, FFmpeg, Whisper, start icon, AI tools connected | Linux end to end (install, update, Whisper, MCP, export); macOS/Windows not on real machines |
 | MCP | MCP server at /mcp + stdio bridge, live update in the editor | Claude Code live over HTTP, real browser; Codex/Hermes not live yet |
 
 ## 🔄 In progress

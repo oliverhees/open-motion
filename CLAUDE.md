@@ -12,6 +12,7 @@ packages/render/src   build (HyperFrames project), render (export), hardware (pl
 packages/server/src   server (routes), auth, queue, worker, store, settings, media, transcribe, diagnose, mcp (+ mcp-stdio bridge), ai/{agent,llm,cli,images}
 packages/editor/src   App, Editor, Stage, preview (hot update), Panel, MediaTab, ChatPanel, dialogs, i18n
 examples/explainer    example spec + assets
+install.sh, install.ps1, scripts/install/setup.ts   one-line installer (same setup.ts on every OS)
 docs/                 guide, spec reference, Coolify deploy; docs/de = German versions
 ```
 

@@ -70,7 +70,25 @@ Ehrlich gesagt: Animationen als Code zu beschreiben und im Browser zu rendern, i
 
 ## 🚀 Quickstart
 
-**Mit Docker (empfohlen):**
+**Auf deinem Rechner: eine Zeile, alles drin** (Node, FFmpeg, optional Whisper, Start-Symbol, Claude Code / Codex / Hermes verbunden). Keine Admin-Rechte, alles landet in einem Ordner.
+
+Linux und macOS (Terminal):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/oliverhees/open-motion/main/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oliverhees/open-motion/main/install.ps1 | iex"
+```
+
+Danach auf **Open Motion** klicken (Windows: Desktop / Startmenü; macOS: `Open Motion.command` auf dem Schreibtisch). Der Editor öffnet sich im Browser. Für ein Update die Zeile einfach nochmal ausführen, deine Projekte bleiben. Mehr: [Installer & KI-Tools](docs/de/mcp.md).
+
+> Komplett getestet auf Linux (Installation, Update, echtes Whisper-Transkript, MCP mit Claude Code, Export). macOS und Windows: noch nicht auf echten Rechnern getestet; die Download-Schritte für Windows sind in PowerShell geprüft.
+
+**Mit Docker (für Server):**
 
 ```bash
 git clone https://github.com/oliverhees/open-motion.git
@@ -90,7 +108,7 @@ npm run editor:build
 npm start                       # → http://localhost:4317
 ```
 
-Danach: ⚙ Einstellungen → API-Keys eintragen → 🩺 **Jetzt testen**.
+Danach: ⚙ Einstellungen → Claude Code / Codex (Abo) wählen oder API-Keys eintragen → 🩺 **Jetzt testen**.
 
 **Auf deinem Server:** [Coolify-Anleitung Schritt für Schritt](docs/de/coolify.md)
 
