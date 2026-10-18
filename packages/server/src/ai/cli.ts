@@ -25,24 +25,40 @@ export const cliBin = (p: CliProvider) => process.env[BIN[p].env] || BIN[p].name
 
 export interface CliMsg { role: "user" | "assistant"; content: string }
 
+/** Live state of the AI, shown in the editor chat while it works (translated there). */
+export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image"; text?: string; ops?: number; n?: number; of?: number }
+
 /** One answer from the CLI. History is flattened into one prompt, because the CLIs run one turn at a time. */
-export async function completeCli(provider: CliProvider, model: string | undefined, system: string, messages: CliMsg[]): Promise<string> {
+export async function completeCli(provider: CliProvider, model: string | undefined, system: string, messages: CliMsg[], onProgress?: (p: AiProgress) => void): Promise<string> {
   const prompt = flatten(messages);
   const work = await mkdtemp(path.join(os.tmpdir(), "om-cli-"));
   try {
     if (provider === "claude-code") {
-      const args = ["-p", "--output-format", "json", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", system];
+      // stream-json: the answer arrives piece by piece, so the editor can show it live like the terminal.
+      const args = ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", system];
       if (model) args.push("--model", model);
       // Without this the CLI would bill an API key from the environment instead of the subscription.
       const env = { ...process.env };
       delete env.ANTHROPIC_API_KEY;
-      const out = await runCli(provider, args, prompt, work, env);
+      let live = "";
+      let thinking = false;
+      const onLine = (line: string) => {
+        if (!onProgress || !line.startsWith("{")) return;
+        try {
+          const ev = JSON.parse(line) as { type?: string; event?: { type?: string; delta?: { type?: string; text?: string } } };
+          const d = ev.type === "stream_event" ? ev.event?.delta : undefined;
+          if (d?.type === "text_delta" && d.text) { live += d.text; onProgress(liveSummary(live)); }
+          else if (d?.type === "thinking_delta" && !thinking && !live) { thinking = true; onProgress({ phase: "thinking" }); }
+        } catch { /* partial or other output */ }
+      };
+      const out = await runCli(provider, args, prompt, work, env, TIMEOUT_MS, onLine);
       return parseClaude(out);
     }
     const last = path.join(work, "answer.txt");
     const args = ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", last];
     if (model) args.push("--model", model);
     args.push("-");
+    onProgress?.({ phase: "thinking" });
     const out = await runCli(provider, args, `${system}\n\n${prompt}`, work, process.env);
     return (await readFile(last, "utf8").catch(() => out)).trim();
   } finally {
@@ -54,6 +70,17 @@ export async function completeCli(provider: CliProvider, model: string | undefin
 export async function cliVersion(provider: CliProvider): Promise<string> {
   const out = await runCli(provider, ["--version"], "", os.tmpdir(), process.env, 30_000);
   return out.trim().split("\n")[0].slice(0, 80);
+}
+
+/**
+ * Live view of a half-written answer {"message": "…", "ops": [ … ]}:
+ * the message as far as it is written, and how many changes are built so far.
+ */
+export function liveSummary(partial: string): AiProgress {
+  const m = /"message"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(partial);
+  const text = m ? m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\(.)/g, "$1") : "";
+  const ops = /"ops"\s*:/.test(partial) ? (partial.match(/"op"\s*:/g) ?? []).length : undefined;
+  return { phase: "writing", text, ops };
 }
 
 function flatten(messages: CliMsg[]): string {
@@ -77,14 +104,22 @@ function loginHint(p: CliProvider, text: string): string {
   return /login|log in|logged|auth|credential|api key|unauthori|401/i.test(text) ? ` → ${BIN[p].login}` : "";
 }
 
-function runCli(p: CliProvider, args: string[], stdin: string, cwd: string, env: NodeJS.ProcessEnv, timeout = TIMEOUT_MS): Promise<string> {
+function runCli(p: CliProvider, args: string[], stdin: string, cwd: string, env: NodeJS.ProcessEnv, timeout = TIMEOUT_MS, onLine?: (line: string) => void): Promise<string> {
   const bin = cliBin(p);
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
     let out = "";
     let err = "";
     const timer = setTimeout(() => { child.kill("SIGTERM"); reject(new Error(`${CLI_LABEL[p]}: keine Antwort nach ${Math.round(timeout / 60_000)} Minuten. Abgebrochen.`)); }, timeout);
-    child.stdout.on("data", (c: Buffer) => { out += c; });
+    let pending = "";
+    child.stdout.on("data", (c: Buffer) => {
+      out += c;
+      if (!onLine) return;
+      pending += c;
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const l of lines) onLine(l);
+    });
     child.stderr.on("data", (c: Buffer) => { err += c; });
     child.on("error", (e: NodeJS.ErrnoException) => {
       clearTimeout(timer);

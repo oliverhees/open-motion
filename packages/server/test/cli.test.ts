@@ -108,3 +108,10 @@ test("CLI errors say what to do: missing program, not logged in", async () => {
     delete process.env.OPENMOTION_CODEX_BIN;
   }
 });
+
+test("liveSummary: shows the half-written answer and counts the changes built so far", async () => {
+  const { liveSummary } = await import("../src/ai/cli.ts");
+  assert.deepEqual(liveSummary('{"message": "Dein Video hat jetzt \\"drei\\" Sze'), { phase: "writing", text: 'Dein Video hat jetzt "drei" Sze', ops: undefined });
+  assert.deepEqual(liveSummary('{"message": "Fertig.", "ops": [{"op":"add","layer":{}},{"op": "set"'), { phase: "writing", text: "Fertig.", ops: 2 });
+  assert.deepEqual(liveSummary(""), { phase: "writing", text: "", ops: undefined });
+});

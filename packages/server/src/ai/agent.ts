@@ -6,6 +6,7 @@ import { httpFetch } from "../http.ts";
 import { applyPatch, describe, isWordCut, sceneTimings, sourceToComp, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
 import type { Settings } from "../settings.ts";
 import { complete, extractJson, type Fetch, type Msg } from "./llm.ts";
+import type { AiProgress } from "./cli.ts";
 import { aspectFor, generateImage } from "./images.ts";
 
 export type AgentKind = "chat" | "comment" | "transcript";
@@ -19,26 +20,31 @@ export interface AgentRequest {
   selection?: string | null;
   t?: number;
   maxLayers?: number;
+  /** Language of the editor UI: the answer to the user is written in it. */
+  lang?: "de" | "en";
 }
 
 export interface AgentResult { message: string; ops: PatchOp[]; changed: string[]; images: string[]; attempts: number }
 
 const MAX_IMAGES = 4;
 
-export async function runAgent(req: AgentRequest, ctx: { settings: Settings; projectDir: string; fetch?: Fetch }): Promise<AgentResult> {
+export async function runAgent(req: AgentRequest, ctx: { settings: Settings; projectDir: string; fetch?: Fetch; onProgress?: (p: AiProgress) => void }): Promise<AgentResult> {
   const f = ctx.fetch ?? httpFetch;
-  const system = systemPrompt(req.spec);
+  const progress = ctx.onProgress ?? (() => {});
+  const system = systemPrompt(req.spec, req.lang);
   const convo: Msg[] = [...history(req), { role: "user", content: `${context(req)}\n\n${task(req)}` }];
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const text = process.env.OPENMOTION_FAKE_AI === "1" ? fakeAnswer(req) : await complete(ctx.settings, system, convo, f);
+    progress(attempt === 1 ? { phase: "thinking" } : { phase: "retry", n: attempt });
+    const text = process.env.OPENMOTION_FAKE_AI === "1" ? fakeAnswer(req) : await complete(ctx.settings, system, convo, f, 8000, progress);
+    progress({ phase: "checking" });
     let out: { message?: unknown; ops?: unknown };
     try {
       out = extractJson(text) as typeof out;
       if (!Array.isArray(out.ops)) throw new Error('Feld "ops" fehlt oder ist kein Array.');
       const ops = out.ops as PatchOp[];
       const check = applyPatch(req.spec, ops);
-      const images = await resolveImages(ops, req.spec, ctx, f);
+      const images = await resolveImages(ops, req.spec, ctx, f, progress);
       return { message: typeof out.message === "string" ? out.message : "Erledigt.", ops, changed: check.changed, images, attempts: attempt };
     } catch (e) {
       lastError = (e as Error).message;
@@ -51,7 +57,7 @@ export async function runAgent(req: AgentRequest, ctx: { settings: Settings; pro
 }
 
 /** Replaces every "ai:<prompt>" src with a generated, locally saved image. */
-async function resolveImages(ops: PatchOp[], spec: MotionSpec, ctx: { settings: Settings; projectDir: string }, f: Fetch): Promise<string[]> {
+async function resolveImages(ops: PatchOp[], spec: MotionSpec, ctx: { settings: Settings; projectDir: string }, f: Fetch, progress: (p: AiProgress) => void = () => {}): Promise<string[]> {
   const wanted: { set: (src: string, prompt: string, model: string) => void; prompt: string; w: number; h: number }[] = [];
   const frameOf = (id: string) => {
     const l = spec.layers.find((x) => x.id === id);
@@ -72,7 +78,8 @@ async function resolveImages(ops: PatchOp[], spec: MotionSpec, ctx: { settings: 
   }
   if (wanted.length > MAX_IMAGES) throw new Error(`Patch op: höchstens ${MAX_IMAGES} KI-Bilder pro Antwort (angefragt: ${wanted.length}).`);
   const out: string[] = [];
-  for (const wnt of wanted) {
+  for (const [i, wnt] of wanted.entries()) {
+    progress({ phase: "image", n: i + 1, of: wanted.length });
     if (!wnt.prompt) throw new Error('Patch op: "ai:" ohne Bild-Prompt.');
     const img = process.env.OPENMOTION_FAKE_AI === "1"
       ? await fakeImage(ctx.projectDir)
@@ -116,14 +123,21 @@ function task(req: AgentRequest): string {
   return `AUFGABE (Nachricht vom Nutzer): ${last}`;
 }
 
-export function systemPrompt(spec: MotionSpec): string {
-  const lang = spec.meta.lang?.startsWith("en") ? "English" : "Deutsch";
+export function systemPrompt(spec: MotionSpec, uiLang?: "de" | "en"): string {
+  const lang = (uiLang ?? (spec.meta.lang?.startsWith("en") ? "en" : "de")) === "en" ? "English" : "Deutsch";
   const { width: W, height: H, fps } = spec.canvas;
   const palette = Object.keys(spec.style?.palette ?? {}).map((k) => `$${k}`).join(", ") || "(keine, nutze Hex-Farben)";
   return `Du bist der Motion-Designer von OpenMotion. Du änderst Videos AUSSCHLIESSLICH über Patch-Operationen auf eine Motion-Spec.
 
 ANTWORTFORMAT: nur dieses JSON, nichts davor oder danach:
-{"message": "1–2 kurze Sätze auf ${lang}, was du geändert hast", "ops": [ … ]}
+{"message": "Deine Antwort an den Nutzer auf ${lang}", "ops": [ … ]}
+
+DIE ANTWORT ("message")
+- Sprich den Nutzer direkt an, wie in einem Chat. Sprache: ${lang}.
+- Sag in 2–5 kurzen Sätzen, was jetzt im Video zu sehen ist: welche Szenen, welche Texte, welcher Look, mit Zeitangaben (z. B. „ab 0:05").
+- Erwähne keine internen Prüfungen, Fehler oder Korrekturen. Der Nutzer sieht nur das Ergebnis.
+- Ist die Bitte unklar oder fehlt dir etwas Wichtiges, stell eine kurze Rückfrage und gib "ops": [] zurück.
+- Inhalte (Texte im Video) in der Sprache, die der Nutzer verwendet, außer er wünscht etwas anderes.
 
 REGELN
 - Ändere nur, was verlangt ist. Bestehende Ebenen behalten ihre id.

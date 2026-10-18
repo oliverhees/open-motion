@@ -10,7 +10,9 @@ export type Provider = "local" | "openai" | "elevenlabs" | "groq" | "deepgram";
 export type LlmProvider = "anthropic" | "openai" | "openrouter" | "claude-code" | "codex";
 export type ImageProvider = "kie" | "openai" | "openrouter" | "gemini";
 export interface PublicSettings { transcription: { provider: Provider; language: string; models: Partial<Record<Provider, string>> }; ai: { provider: LlmProvider; model?: string }; images: { provider: ImageProvider; model?: string }; keys: Record<string, { set: boolean; hint?: string }> }
-export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number }
+export interface Task<T = unknown> { id: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number; progress?: AiProgress }
+/** Live state of the AI while it works (from the server, translated in the chat). */
+export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image"; text?: string; ops?: number; n?: number; of?: number }
 export interface TranscriptResult { source: string; language?: string; provider: string; words: { id: string; text: string; t0: number; t1: number }[] }
 export interface ExportRequest { format: "mp4" | "gif"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean }
 export interface RenderPlan { workers: number; gpu: boolean; reason: string; info?: { cores: number; container: boolean; memGB: number; load: number; limit: "cpu" | "ram" | "cap" | "forced"; gpuName?: string } }
@@ -54,12 +56,12 @@ export const api = {
   ai: (id: string, body: unknown) => req<Task<AgentResult>>(`/api/projects/${id}/ai`, { method: "POST", body: JSON.stringify(body) }),
   aiImage: (id: string, body: { prompt: string; w: number; h: number }) => req<Task<{ path: string; provider: string; model: string }>>(`/api/projects/${id}/ai/image`, { method: "POST", body: JSON.stringify(body) }),
   /** Polls a background task until it is done; throws its error. */
-  wait: async <T,>(task: Task<T>, onTick?: () => void): Promise<T> => {
+  wait: async <T,>(task: Task<T>, onTick?: (t: Task<T>) => void): Promise<T> => {
     let t = task;
     while (t.status === "queued" || t.status === "running") {
       await new Promise((r) => setTimeout(r, 1000));
-      onTick?.();
       t = await req<Task<T>>(`/api/tasks/${t.id}`);
+      onTick?.(t);
     }
     if (t.status === "error" || t.result === undefined) throw new Error(t.error ?? "Aufgabe fehlgeschlagen");
     return t.result;

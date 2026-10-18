@@ -186,7 +186,7 @@ export function createServer(opts: ServerOptions) {
             if (!body?.spec || !["chat", "comment", "transcript"].includes(body.kind)) throw new HttpError(422, "kind und spec fehlen");
             const dir = store.dir(id);
             const s = await settings.read();
-            return json(res, 202, tasks.start("ai", () => runAgent(body, { settings: s, projectDir: dir })));
+            return json(res, 202, tasks.start("ai", (progress) => runAgent(body, { settings: s, projectDir: dir, onProgress: progress })));
           }
           if (sub === "ai" && parts[4] === "image" && m === "POST") {
             const body = await readBody<{ prompt?: string; w?: number; h?: number }>(req);

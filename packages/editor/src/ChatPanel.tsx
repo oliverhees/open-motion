@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChatEntry } from "./api.ts";
+import type { AiProgress, ChatEntry } from "./api.ts";
 import { useT } from "./i18n.ts";
 
 interface Props {
   entries: ChatEntry[];
-  busy: { label: string; started: number } | null;
+  busy: { label: string; started: number; progress?: AiProgress } | null;
   model: string;
   queued: number;
   hasTranscript: boolean;
@@ -22,7 +22,7 @@ export function ChatPanel(p: Props) {
   const [text, setText] = useState("");
   const [, tick] = useState(0);
   const log = useRef<HTMLDivElement>(null);
-  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }); }, [p.entries.length, p.busy]);
+  useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }); }, [p.entries.length, p.busy, p.busy?.progress?.text]);
   useEffect(() => {
     if (!p.busy) return;
     const h = setInterval(() => tick((n) => n + 1), 1000);
@@ -51,7 +51,7 @@ export function ChatPanel(p: Props) {
             )}
           </div>
         ))}
-        {p.busy && <div className="thinking">{p.busy.label} · {t_("aiThinking", { s: Math.round((Date.now() - p.busy.started) / 1000) })}</div>}
+        {p.busy && <Live busy={p.busy} />}
       </div>
       <div className="chat-foot">
         <div className="quick">
@@ -63,5 +63,23 @@ export function ChatPanel(p: Props) {
         <button className="primary" disabled={!text.trim() || !!p.busy} onClick={send}>{t_("send")}</button>
       </div>
     </aside>
+  );
+}
+
+/** What the AI is doing right now: its answer as far as written, the number of changes, or the current step. */
+function Live({ busy }: { busy: { label: string; started: number; progress?: AiProgress } }) {
+  const t_ = useT();
+  const pr = busy.progress;
+  const secs = Math.round((Date.now() - busy.started) / 1000);
+  const step = !pr || pr.phase === "thinking" ? t_("aiThinking", { s: secs })
+    : pr.phase === "writing" ? (pr.ops !== undefined ? t_("aiBuilding", { n: pr.ops, s: secs }) : t_("aiWriting", { s: secs }))
+    : pr.phase === "checking" ? t_("aiChecking")
+    : pr.phase === "retry" ? t_("aiRetry", { n: pr.n ?? 2 })
+    : t_("aiMakingImage", { n: pr.n ?? 1, of: pr.of ?? 1 });
+  return (
+    <>
+      {pr?.text && <div className="msg assistant live">{pr.text}</div>}
+      <div className="thinking">{busy.label} · {step}</div>
+    </>
   );
 }

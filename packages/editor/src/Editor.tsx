@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { applyPatch, compositionDuration, facecamLayers, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
-import { api, fmtTime, type AgentResult, type Asset, type ChatEntry, type Comment, type ProjectInfo, type Provider, type PublicSettings, type TranscriptResult } from "./api.ts";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { applyPatch, compositionDuration, facecamLayers, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { api, fmtTime, type AgentResult, type AiProgress, type Asset, type ChatEntry, type Comment, type ProjectInfo, type Provider, type PublicSettings, type TranscriptResult } from "./api.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import type { SttState, Upload } from "./MediaTab.tsx";
 import { RecordDialog } from "./RecordDialog.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
-import { useT } from "./i18n.ts";
+import { LangContext, useT } from "./i18n.ts";
 import { LangSwitch, LogoutButton } from "./App.tsx";
 import { Stage, type Draft } from "./Stage.tsx";
 import { Preview } from "./preview.ts";
@@ -40,7 +40,8 @@ export function Editor({ id }: { id: string }) {
   const [showSettings, setShowSettings] = useState(false);
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const [chatOpen, setChatOpen] = useState(true);
-  const [aiBusy, setAiBusy] = useState<{ label: string; started: number } | null>(null);
+  const [aiBusy, setAiBusy] = useState<{ label: string; started: number; progress?: AiProgress } | null>(null);
+  const { lang } = useContext(LangContext);
   const [flash, setFlash] = useState<string[]>([]);
   const [imgBusy, setImgBusy] = useState<{ id: string; started: number } | null>(null);
   const snaps = useRef(new Map<string, { before: MotionSpec; after: MotionSpec }>());
@@ -59,6 +60,8 @@ export function Editor({ id }: { id: string }) {
   useEffect(() => {
     api.read(id).then((r) => {
       setSpec(r.spec);
+      // Start a bit in, not at 0:00: most things fade in, so the very first frame is often empty.
+      setT(Math.min(1.5, compositionDuration(r.spec)));
       setProject(r.project);
       setComments(r.comments);
       hist.current = { list: [{ spec: r.spec, at: Date.now() }], i: 0 };
@@ -356,8 +359,8 @@ export function Editor({ id }: { id: string }) {
   const askAi = async (label: string, body: Record<string, unknown>): Promise<AgentResult> => {
     setAiBusy({ label, started: Date.now() });
     try {
-      const task = await api.ai(id, { ...body, spec: specRef.current, selection: selected, t });
-      return await api.wait(task);
+      const task = await api.ai(id, { ...body, spec: specRef.current, selection: selected, t, lang });
+      return await api.wait(task, (tk) => setAiBusy((b) => (b ? { ...b, progress: tk.progress } : b)));
     } finally {
       setAiBusy(null);
     }
@@ -371,9 +374,27 @@ export function Editor({ id }: { id: string }) {
       snaps.current.set(entryId, { before, after: specRef.current! });
       setFlash(res.changed);
       setTimeout(() => setFlash([]), 2600);
+      showChanged(res.changed);
     }
     if (res.images.length) api.assets(id).then(setAssets).catch(() => {});
     return entryId;
+  };
+
+  /** Jump to where the first changed element is fully visible, so the change is seen right away. */
+  const showChanged = (ids: string[]) => {
+    const s = specRef.current;
+    if (!s) return;
+    const scenes = sceneTimings(s);
+    let best: number | null = null;
+    for (const l of s.layers) {
+      if (!ids.includes(l.id) || l.type === "audio") continue;
+      try {
+        const tm = layerTiming(s, l, scenes);
+        const at = Math.min(tm.end - 0.05, tm.start + (((l as { in?: { duration?: number } }).in?.duration ?? 0.6) / tm.speed) + 0.3);
+        if (best === null || at < best) best = at;
+      } catch { /* anchor without transcript */ }
+    }
+    if (best !== null) setTimeout(() => seek(best!), 50);
   };
 
   const sendChat = async (text: string) => {

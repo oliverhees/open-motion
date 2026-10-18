@@ -1,21 +1,23 @@
 // Background tasks (transcription): one at a time, CPU-heavy work never piles up.
 import { randomBytes } from "node:crypto";
 
-export interface Task<T = unknown> { id: string; kind: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; startedAt?: number; finishedAt?: number }
+/** progress: live text while running (e.g. what the AI is writing right now), shown in the editor. */
+export interface Task<T = unknown> { id: string; kind: string; status: "queued" | "running" | "done" | "error"; result?: T; error?: string; progress?: unknown; startedAt?: number; finishedAt?: number }
 
 export class Tasks {
   private map = new Map<string, Task>();
   private queue: (() => Promise<void>)[] = [];
   private busy = false;
 
-  start<T>(kind: string, fn: () => Promise<T>): Task<T> {
+  start<T>(kind: string, fn: (progress: (p: unknown) => void) => Promise<T>): Task<T> {
     const task: Task<T> = { id: randomBytes(5).toString("hex"), kind, status: "queued" };
     this.map.set(task.id, task);
     this.queue.push(async () => {
       task.status = "running";
       task.startedAt = Date.now();
       try {
-        task.result = await fn();
+        task.result = await fn((p) => { task.progress = p; });
+        task.progress = undefined;
         task.status = "done";
       } catch (e) {
         task.status = "error";

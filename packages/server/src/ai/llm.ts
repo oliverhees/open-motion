@@ -2,17 +2,17 @@ import { httpFetch } from "../http.ts";
 // Language models with your own key: Anthropic (Claude), OpenAI, OpenRouter.
 // Or without a key through a local CLI and your subscription: Claude Code, Codex (see cli.ts).
 import { DEFAULT_LLM_MODELS, type LlmProvider, type Settings } from "../settings.ts";
-import { CLI_LABEL, completeCli, isCliProvider } from "./cli.ts";
+import { CLI_LABEL, completeCli, isCliProvider, type AiProgress } from "./cli.ts";
 
 export interface Msg { role: "user" | "assistant"; content: string }
 export type Fetch = typeof fetch;
 
 const LABEL: Record<LlmProvider, string> = { anthropic: "Anthropic (Claude)", openai: "OpenAI", openrouter: "OpenRouter", ...CLI_LABEL };
 
-export async function complete(settings: Settings, system: string, messages: Msg[], f: Fetch = httpFetch, maxTokens = 8000): Promise<string> {
+export async function complete(settings: Settings, system: string, messages: Msg[], f: Fetch = httpFetch, maxTokens = 8000, onProgress?: (p: AiProgress) => void): Promise<string> {
   const provider = settings.ai.provider;
   const model = settings.ai.model || DEFAULT_LLM_MODELS[provider];
-  if (isCliProvider(provider)) return completeCli(provider, model || undefined, system, messages);
+  if (isCliProvider(provider)) return completeCli(provider, model || undefined, system, messages, onProgress);
   const key = settings.keys[provider];
   if (!key) throw new Error(`Kein API-Key für ${LABEL[provider]}. Trag ihn unter ⚙ Einstellungen ein.`);
   if (provider === "anthropic") {
