@@ -184,3 +184,9 @@ test("lottie: a glow fading to transparent keeps its color (no dark ring)", () =
   const gf = layer.shapes[0].it.find((i: any) => i.ty === "gf");
   assert.deepEqual(gf.g.k.k, [0, 1, 0.2, 0, 0.65, 1, 0.2, 0, 0, 1, 0.65, 0]);
 });
+
+test("fitText: even when nothing fits the height, the text is wrapped to the width", async () => {
+  const { fitText } = await import("@openmotion/core");
+  const r = fitText("Ein deutlich längerer Text als vorgesehen mit sehr vielen Wörtern", 300, 30, 80, 40, 0.6, 1.04);
+  for (const line of r.text.split("\n")) assert.ok(line.length * r.size * 0.6 <= 300, line);
+});

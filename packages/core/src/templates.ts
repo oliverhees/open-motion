@@ -74,7 +74,7 @@ export function fitText(text: string, boxW: number, boxH: number, max: number, m
   const W = boxW * 0.96;
   // Below min only when the text cannot fit otherwise (long user texts): never smaller than ~55 % of min.
   const floor = Math.max(12, min * 0.55);
-  const tryAt = (size: number, hyphenate: boolean): string[] | null => {
+  const tryAt = (size: number, hyphenate: boolean, anyHeight = false): string[] | null => {
     const perLine = Math.max(1, Math.floor(W / (size * cw)));
     const out: string[] = [];
     for (const para of text.split("\n")) {
@@ -92,7 +92,7 @@ export function fitText(text: string, boxW: number, boxH: number, max: number, m
       out.push(line);
     }
     // Slack: animated words sit in inline boxes that make a line a little taller than size × line height.
-    return out.length <= maxLines && out.length * size * lh + size * 0.3 <= boxH ? out : null;
+    return anyHeight || (out.length <= maxLines && out.length * size * lh + size * 0.3 <= boxH) ? out : null;
   };
   const step = (size: number) => Math.max(1, Math.floor(size / 40));
   for (const hyphenate of [false, true]) {
@@ -101,8 +101,10 @@ export function fitText(text: string, boxW: number, boxH: number, max: number, m
       if (out) return { size, text: balanceMarkers(out).join("\n"), lines: out.length };
     }
   }
+  // Nothing fits the height: still wrap to the width (line-by-line animations would otherwise keep one long line).
   const size = Math.floor(floor);
-  return { size, text, lines: Math.max(1, Math.ceil((plainLen(text) * size * cw) / boxW)) };
+  const out = tryAt(size, true, true) ?? [text];
+  return { size, text: balanceMarkers(out).join("\n"), lines: out.length };
 }
 
 /** Font size at which a one-line text fits a width (pills, buttons, handles). */
@@ -507,8 +509,11 @@ export const TEMPLATES: TemplateDef[] = [
         const pad = c.u * 4;
         const onAccent = i === 1;
         out.push(at(c, T, shape(c, `card${i}`, f, fill, { radius: r(c.u * 2.5), ...(i === 0 ? card(c) : {}), in: enter(c, i ? "slideLeft" : "slideRight") }), t));
-        out.push(at(c, T, headline(c, `title${i}`, { x: f.x + pad, y: f.y + pad, w: f.w - 2 * pad, h: c.u * 13 }, title, c.u * 7.5, { styleExtra: { color: onAccent ? "$bg" : "$ink", highlight: onAccent ? "$bg" : "$accent" } }), t + 0.15));
-        out.push(at(c, T, body(c, `items${i}`, { x: f.x + pad, y: f.y + pad + c.u * 15, w: f.w - 2 * pad, h: f.h - 2 * pad - c.u * 15 }, lines(items).map((l) => `${onAccent ? "✓" : "✗"}  ${l}`).join("\n"), c.u * 4.2, { styleExtra: { color: onAccent ? "$bg" : "$muted" } }), t + 0.35));
+        // The title takes the height it needs (up to ~40 % of the card); the points start right below it.
+        const tf = fitText(title, f.w - 2 * pad, Math.max(c.u * 13, (f.h - 2 * pad) * 0.4), c.u * 7.5, c.u * 4.2, isUpper(title) ? c.font.dwU : c.font.dw, 1.04);
+        const th = Math.max(c.u * 9, tf.lines * tf.size * 1.04 + tf.size * 0.3);
+        out.push(at(c, T, headline(c, `title${i}`, { x: f.x + pad, y: f.y + pad, w: f.w - 2 * pad, h: th }, title, c.u * 7.5, { styleExtra: { color: onAccent ? "$bg" : "$ink", highlight: onAccent ? "$bg" : "$accent" } }), t + 0.15));
+        out.push(at(c, T, body(c, `items${i}`, { x: f.x + pad, y: f.y + pad + th + c.u * 2, w: f.w - 2 * pad, h: f.h - 2 * pad - th - c.u * 2 }, lines(items).map((l) => `${onAccent ? "✓" : "✗"}  ${l}`).join("\n"), c.u * 4.2, { styleExtra: { color: onAccent ? "$bg" : "$muted" } }), t + 0.35));
       });
       const vs = c.u * 11;
       const vc = c.vertical ? { x: c.W / 2, y: (y0 + y1) / 2 } : { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };

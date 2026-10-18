@@ -8,7 +8,7 @@
 
 **开源、可自托管的动态图形工作室：每个元素都是一个可实时编辑的图层。**
 
-[![许可证: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![状态](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-状态) [![技术栈](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-架构) [![自托管](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![测试](https://img.shields.io/badge/Tests-91%20passing-brightgreen.svg)](#-状态)
+[![许可证: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE) [![状态](https://img.shields.io/badge/Status-Beta%200.1-orange.svg)](#-状态) [![技术栈](https://img.shields.io/badge/Stack-HyperFrames%20%2B%20Web%20Animations-informational.svg)](#-架构) [![自托管](https://img.shields.io/badge/Self--hosted-Docker%20%2B%20Coolify-black.svg)](docs/deploy-coolify.md) [![测试](https://img.shields.io/badge/Tests-92%20passing-brightgreen.svg)](#-状态)
 
 *描述你的视频、对着摄像头讲话，或直接拖入文件。AI 搭建图层，你实时微调，最后导出 MP4。*
 
@@ -110,7 +110,7 @@ npm start                       # → http://localhost:4317
 
 ## 🔧 状态
 
-**Beta 0.1，由 91 个自动化测试和端到端测试保障。** 已完成：图层核心、实时编辑器、摄像头录制、本地转录、文字剪辑、AI 代理（测试模式和模拟服务商）、登录与令牌、编辑器与渲染进程分离、自适应渲染。待完成：使用真实密钥实测所有 API、在 Coolify 上验证 Docker 构建、MCP 连接器以及 Skill。
+**Beta 0.1，由 92 个自动化测试和端到端测试保障。** 已完成：图层核心、实时编辑器、摄像头录制、本地转录、文字剪辑、AI 代理（测试模式和模拟服务商）、登录与令牌、编辑器与渲染进程分离、自适应渲染。待完成：使用真实密钥实测所有 API、在 Coolify 上验证 Docker 构建、MCP 连接器以及 Skill。
 
 **已知限制：** AI、图片和转录 API 按照各服务商的文档与响应格式实现，使用真实密钥的实测正在进行中。整个场景暂时不会跟随文字剪辑移动。目前所有人共用一个密码。部分服务端消息仍为德语。
 
