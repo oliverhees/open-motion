@@ -18,7 +18,8 @@ interface Props {
   imgBusy: { id: string; started: number } | null;
 }
 
-const TRANSITIONS: TransitionType[] = ["fade", "slideUp", "slideDown", "slideLeft", "slideRight", "pop", "wipe", "blur"];
+const TRANSITIONS: TransitionType[] = ["fade", "slideUp", "slideDown", "slideLeft", "slideRight", "pop", "blur", "zoomIn", "zoomOut", "maskUp", "wipe", "wipeLeft", "wipeUp", "wipeDown", "iris"];
+const TEXT_ANIMS = ["rise", "mask", "blur", "pop", "fade", "drop", "slide", "type"] as const;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export function Panel(p: Props) {
@@ -186,7 +187,39 @@ function LayerSection({ spec, t, selected, apply, assets, select, onGenerateImag
             <button key={a} className={(layer.style.align ?? "left") === a ? "on" : ""} onClick={() => set("style.align", a)}>{a === "left" ? "⟸" : a === "center" ? "⟺" : "⟹"}</button>
           ))}</div>
         </Field>
+        <Field label={t_("fontFamily")}>
+          <input key={`ff-${id}`} defaultValue={layer.style.fontFamily ?? ""} placeholder="Instrument Serif, Anton, Geist …" title={t_("fontHint")}
+            onBlur={(e) => e.target.value.trim() !== (layer.style.fontFamily ?? "") && set("style.fontFamily", e.target.value.trim() || null)} />
+        </Field>
+        <Field label={t_("textAnim")}>
+          <div className="pair">
+            <select value={layer.anim?.type ?? ""} onChange={(e) => set("anim", e.target.value ? { ...(layer.anim ?? {}), type: e.target.value } : null)}>
+              <option value="">{t_("none")}</option>
+              {TEXT_ANIMS.map((a) => <option key={a} value={a}>{t_(`ta_${a}` as Key)}</option>)}
+            </select>
+            <select value={layer.anim?.by ?? "word"} disabled={!layer.anim} onChange={(e) => set("anim.by", e.target.value)}>
+              {(["word", "char", "line"] as const).map((b) => <option key={b} value={b}>{t_(`by_${b}` as Key)}</option>)}
+            </select>
+          </div>
+        </Field>
       </>}
+      {layer.type === "svg" && (
+        <label className="check"><input type="checkbox" checked={!!layer.draw} onChange={(e) => set("draw", e.target.checked ? { duration: 1.2 } : null)} /> {t_("drawOn")}</label>
+      )}
+      {layer.type === "captions" && <>
+        <Field label={t_("fontSize")}><NumInput value={layer.style.fontSize} min={4} onChange={(v) => v > 0 && set("style.fontSize", v)} /></Field>
+        <Field label={t_("capWords")}><NumInput value={layer.words ?? 3} min={1} max={12} step={1} onChange={(v) => v >= 1 && set("words", Math.round(v))} /></Field>
+        <Field label={t_("capActive")}><Swatches palette={palette} value={layer.active?.background ?? "#FFE600"} onChange={(c) => set("active.background", c)} /></Field>
+      </>}
+      {layer.type !== "audio" && (
+        <Field label={t_("lookFx")}>
+          <div className="btnrow">
+            <button className={layer.look?.glow ? "on" : ""} onClick={() => set("look.glow", layer.look?.glow ? null : ("accent" in palette ? "$accent" : "#ffffff"))}>{t_("fxGlow")}</button>
+            <button className={layer.look?.shadow ? "on" : ""} onClick={() => set("look.shadow", layer.look?.shadow ? null : "0 24px 48px #00000080")}>{t_("fxShadow")}</button>
+            {layer.type === "shape" && <button className={layer.look?.glass ? "on" : ""} onClick={() => set("look.glass", layer.look?.glass ? null : 24)}>{t_("fxGlass")}</button>}
+          </div>
+        </Field>
+      )}
       {layer.type === "shape" && <Field label={t_("fill")}><Swatches palette={palette} value={layer.fill ?? "#888888"} onChange={(c) => set("fill", c)} /></Field>}
       {(layer.type === "image" || layer.type === "video") && <>
         <Field label={t_("source")}>

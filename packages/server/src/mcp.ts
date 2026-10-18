@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   applyPatch, compositionDuration, describe, facecamLayers, findSuggestions, isWordCut, sceneTimings, sourceToComp,
-  FORMATS, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp,
+  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp,
 } from "@openmotion/core";
 import { estimate } from "@openmotion/render";
 import type { ServerContext } from "./server.ts";
@@ -233,6 +233,18 @@ const TOOLS: Tool[] = [
       const name = `${a.project}-${request.height}p-${stamp}.${request.format}`;
       const job = await c.queue.enqueue("export", { projectId: a.project, spec, request, name }, { projectId: a.project, request, estimateSeconds: est.seconds, plan: est.plan });
       return { job: job.id, estimate_seconds: est.seconds, hint: "Call job_status with wait_seconds until status is done." };
+    },
+  },
+  {
+    name: "add_captions",
+    description: "Add word-by-word captions from the transcript (phrases, active word highlighted, follow cuts), placed for the format and styled like the project. Tweak afterwards with apply_patch (set style.*, words, active.*).",
+    inputSchema: obj({ project }, ["project"]),
+    run: async (a, c) => {
+      const { spec } = await c.store.read(a.project);
+      if (!spec.transcript?.words.length) throw new Error("No transcript yet. Use transcribe first.");
+      const taken = new Set(spec.layers.map((l) => l.id));
+      const layer = captionsLayer(spec, unique("captions", taken));
+      return { ...(await save(c, a.project, [{ op: "add", layer }])), layer: layer.id };
     },
   },
   {

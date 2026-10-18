@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { applyPatch, compositionDuration, facecamLayers, getStyle, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
+import { applyPatch, captionsLayer, compositionDuration, facecamLayers, getStyle, layerTiming, sceneTimings, valueAt, type FacecamLayout, type Layer, type MotionSpec, type PatchOp } from "@openmotion/core";
 import { api, fmtTime, type AgentResult, type AiProgress, type Asset, type ChatEntry, type Comment, type ProjectInfo, type Provider, type PublicSettings, type TranscriptResult } from "./api.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { Interview, type Brief } from "./Interview.tsx";
@@ -596,7 +596,8 @@ export function Editor({ id }: { id: string }) {
         onGenerateImage={(lid, prompt) => void genImage(lid, prompt)} imgBusy={imgBusy}
         media={{ uploads, stt, caps, defaultProvider: settings?.transcription.provider ?? "local", defaultLanguage: settings?.transcription.language ?? "auto",
           onUpload: (f) => void uploadFiles(f), onRecord: () => setShowRecord(true), onAdd: (a, as) => addAsset(a, as),
-          onTranscribe: (src, pr, lang) => void runTranscribe(src, pr, lang) }} />
+          onTranscribe: (src, pr, lang) => void runTranscribe(src, pr, lang),
+          onAddCaptions: () => { const s = specRef.current; if (s) { const cap = captionsLayer(s); apply([{ op: "add", layer: cap }]); setSelected(cap.id); } } }} />
 
       {toast && <div className="toast" role="alert" onClick={() => setToast(null)}>{toast}</div>}
       {showExport && <ExportDialog projectId={id} spec={spec} onClose={() => setShowExport(false)} />}

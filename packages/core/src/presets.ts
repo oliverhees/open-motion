@@ -1,6 +1,8 @@
 // Ready-made building blocks the editor and AI use a lot.
 
-import type { AudioLayer, Frame, MotionSpec, VideoLayer } from "./types.ts";
+import type { AudioLayer, Frame, Layer, MotionSpec, VideoLayer } from "./types.ts";
+import { getStyle } from "./styles.ts";
+import { compositionDuration } from "./timing.ts";
 
 export type FacecamLayout = "full" | "right" | "corner" | "split" | "circle";
 
@@ -71,4 +73,31 @@ export function facecamLayers(opts: {
     ...(opts.mediaStart ? { mediaStart: opts.mediaStart } : {}),
   };
   return [video, audio];
+}
+
+/**
+ * Ready-made captions layer for the transcript, placed for the canvas format and dressed in the
+ * project's style (display font, active word on the accent color). Fixed: the camera does not move it.
+ */
+export function captionsLayer(spec: MotionSpec, id = "captions"): Layer {
+  const { width: W, height: H } = spec.canvas;
+  const vertical = H > W;
+  const st = getStyle(spec.meta.style);
+  const pal = spec.style?.palette ?? {};
+  const size = Math.round(Math.min(W, H) * (vertical ? 0.075 : 0.06));
+  const h = Math.round(size * 2.6);
+  // Portrait: above the platform UI at the bottom. Landscape: lower third.
+  const y = vertical ? Math.round(H * 0.64) : H - h - Math.round(H * 0.07);
+  const end = Math.max(compositionDuration(spec), 1);
+  return {
+    id, name: "Captions", type: "captions", track: 950, start: 0, duration: end, fixed: true,
+    frame: { x: Math.round(W * 0.08), y, w: Math.round(W * 0.84), h },
+    style: {
+      fontSize: size, fontWeight: st ? Math.max(st.fonts.displayWeight, 700) : 800, uppercase: true, align: "center", valign: "middle", lineHeight: 1.1,
+      color: "ink" in pal ? "$ink" : "#ffffff", ...(st ? { fontFamily: st.fonts.display } : {}),
+    },
+    words: vertical ? 2 : 3,
+    active: { color: "bg" in pal ? "$bg" : "#111111", background: "accent" in pal ? "$accent" : "#FFE600", scale: 1.06 },
+    look: { shadow: "0 4px 12px #00000099" },
+  };
 }
