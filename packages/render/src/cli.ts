@@ -86,10 +86,10 @@ async function main() {
       };
       const est = await estimate(spec, opts);
       console.log(`… ${est.plan.reason}`);
-      console.log(`… rendere ${est.frames} Bilder (Schätzung: ~${est.seconds < 90 ? `${est.seconds} s` : `${Math.round(est.seconds / 60)} min`})`);
+      if (opts.format !== "lottie") console.log(`… rendere ${est.frames} Bilder (Schätzung: ~${est.seconds < 90 ? `${est.seconds} s` : `${Math.round(est.seconds / 60)} min`})`);
       const r = await renderVideo(spec, opts);
       for (const w of r.warnings ?? []) console.log(`⚠ Lottie: ${LOTTIE_HINT[w.code]}${w.layers.length ? ` (${w.layers.join(", ")})` : ""}`);
-      console.log(`✓ ${r.output}  ${r.width}×${r.height}, ${r.duration}s, fertig in ${r.seconds}s mit ${r.plan.workers} Worker(n)`);
+      console.log(`✓ ${r.output}  ${r.width}×${r.height}, ${Math.round(r.duration * 100) / 100}s, ${r.plan.workers ? `fertig in ${r.seconds}s mit ${r.plan.workers} Worker(n)` : `fertig in ${r.seconds}s`}`);
       return;
     }
     case "patch": {
