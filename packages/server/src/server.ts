@@ -8,7 +8,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { Store, HttpError, type Comment } from "./store.ts";
-import { sanitize, type ExportRequest } from "./jobs.ts";
+import { exportName, sanitize, withDefaults, type ExportRequest } from "./jobs.ts";
 import { SettingsStore, type Provider } from "./settings.ts";
 import { receiveUpload } from "./media.ts";
 import { localAvailable } from "./transcribe.ts";
@@ -251,12 +251,11 @@ export function createServer(opts: ServerOptions) {
             return json(res, 202, view(job));
           }
           if (sub === "export" && m === "POST") {
-            const request = sanitize(await readBody<Partial<ExportRequest>>(req));
             const { spec } = await store.read(id);
+            const request = withDefaults(sanitize(await readBody<Partial<ExportRequest>>(req)), spec);
             const w = readWorker(opts.dataDir);
             const est = await estimate(spec, { ...request, statsFile, hardware: w?.hardware });
-            const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-            const name = `${id}-${request.height}p-${stamp}.${request.format}`;
+            const name = exportName(id, request);
             const job = await queue.enqueue("export", { projectId: id, spec, request, name }, { projectId: id, request, estimateSeconds: est.seconds, plan: est.plan });
             return json(res, 202, { ...view(job), workerOnline: !!w?.online });
           }

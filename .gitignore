@@ -9,3 +9,8 @@ data/
 packages/editor/dist/
 **/__pycache__/
 !docs/assets/*.gif
+
+# preview helpers written next to a spec by scripts/frames.ts and scripts/lottie-frames.ts
+.frames.html
+.lottie.html
+.overlay.html

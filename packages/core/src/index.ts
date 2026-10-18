@@ -11,3 +11,5 @@ export { describe } from "./describe.ts";
 export { facecamFrame, facecamLayers, captionsLayer, type FacecamLayout } from "./presets.ts";
 export { normalizeCuts, removedBetween, isCutLayer, keptSegments, findSuggestions, wordRange, isWordCut, subtractCut, type Segment, type Suggestion } from "./cuts.ts";
 export { STYLES, FORMATS, FORMAT_SIZE, getStyle, styleBrief, type StyleDef, type Format } from "./styles.ts";
+export { toLottie, parseColor, LOTTIE_HINTS, type LottieOptions, type LottieResult, type LottieWarning, type LottieWarningCode } from "./lottie.ts";
+export { backgroundLayers, type BackgroundCandidate } from "./overlay.ts";

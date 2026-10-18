@@ -13,13 +13,12 @@ import os from "node:os";
 import path from "node:path";
 import {
   applyPatch, compositionDuration, describe, facecamLayers, findSuggestions, isWordCut, sceneTimings, sourceToComp,
-  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp,
-} from "@openmotion/core";
+  FORMATS, captionsLayer, getStyle, STYLES, styleBrief, type FacecamLayout, type MotionSpec, type PatchOp, LOTTIE_HINTS, type LottieWarningCode } from "@openmotion/core";
 import { estimate } from "@openmotion/render";
 import type { ServerContext } from "./server.ts";
 import { HttpError } from "./store.ts";
 import { kindOf, probe, receiveUpload } from "./media.ts";
-import { sanitize, type ExportRequest } from "./jobs.ts";
+import { exportName, sanitize, withDefaults, type ExportRequest } from "./jobs.ts";
 import { PROVIDERS, type Provider } from "./settings.ts";
 import { motionGuide } from "./ai/guide.ts";
 import { renderFrames } from "./frames.ts";
@@ -197,8 +196,10 @@ const TOOLS: Tool[] = [
         }
         return { ...base, words: res.words.length, language: res.language, hint: "Transcript saved. Next: get_transcript" };
       }
-      const file = (job.result as { file?: string })?.file;
-      return { ...base, file, url: file ? `${c.baseUrl}/projects/${job.projectId}/${file}?download` : undefined };
+      const r = job.result as { file?: string; warnings?: { code: LottieWarningCode; layers: string[] }[] } | undefined;
+      const file = r?.file;
+      const missing = r?.warnings?.map((w) => `${LOTTIE_HINTS[w.code] ?? w.code}${w.layers.length ? ` (${w.layers.join(", ")})` : ""}`);
+      return { ...base, file, url: file ? `${c.baseUrl}/projects/${job.projectId}/${file}?download` : undefined, ...(missing?.length ? { lottie_missing: missing } : {}) };
     },
   },
   {
@@ -222,15 +223,14 @@ const TOOLS: Tool[] = [
   },
   {
     name: "export_video",
-    description: "Render the video to MP4 (or GIF) in the background. height 720/1080/1440/2160 (default 1080), fps 24/25/30/50/60. Then job_status for the download link.",
-    inputSchema: obj({ project, height: { type: "number" }, fps: { type: "number" }, format: { type: "string", enum: ["mp4", "gif"] } }, ["project"]),
+    description: "Render in the background, then job_status for the download link. format: mp4 (default), gif, webm or mov (both with a TRANSPARENT background, for overlays in Premiere/DaVinci/CapCut; mov = ProRes 4444, large), lottie (Lottie JSON, beta: video, captions, glow, blur and 3D are left out, job_status lists what). height 720/1080/1440/2160 (default 1080), fps 24/25/30/50/60. Transparent exports hide full-canvas background shapes by default; pass hide (layer ids) to choose yourself, transparent:false to keep the background.",
+    inputSchema: obj({ project, height: { type: "number" }, fps: { type: "number" }, format: { type: "string", enum: ["mp4", "gif", "webm", "mov", "lottie"] }, transparent: { type: "boolean" }, hide: { type: "array", items: { type: "string" } } }, ["project"]),
     run: async (a, c) => {
-      const request = sanitize({ height: a.height, fps: a.fps, format: a.format } as Partial<ExportRequest>);
       const { spec } = await c.store.read(a.project);
+      const request = withDefaults(sanitize({ height: a.height, fps: a.fps, format: a.format, transparent: a.transparent, hide: a.hide } as Partial<ExportRequest>), spec);
       const statsFile = path.resolve(c.dataDir, "render-stats.json");
       const est = await estimate(spec, { ...request, statsFile });
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-      const name = `${a.project}-${request.height}p-${stamp}.${request.format}`;
+      const name = exportName(a.project, request);
       const job = await c.queue.enqueue("export", { projectId: a.project, spec, request, name }, { projectId: a.project, request, estimateSeconds: est.seconds, plan: est.plan });
       return { job: job.id, estimate_seconds: est.seconds, hint: "Call job_status with wait_seconds until status is done." };
     },

@@ -2,18 +2,25 @@
 // Options mirror an export dialog: format, resolution, frame rate, quality, sharper text.
 
 import { spawn } from "node:child_process";
-import { mkdtemp, mkdir, rename, rm, copyFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rename, rm, copyFile, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { compositionDuration, isCutLayer, keptSegments, type MotionSpec } from "@openmotion/core";
+import { compositionDuration, isCutLayer, keptSegments, toLottie, type LottieWarning, type MotionSpec } from "@openmotion/core";
+import { fontMetrics, type FontMetrics } from "./fontmetrics.ts";
 import { buildComposition } from "./build.ts";
 import { detectHardware, estimateSeconds, planRender, readStats, recordRender, type RenderPlan } from "./hardware.ts";
 
 export interface RenderOptions {
   specDir: string;
   output: string;
-  format?: "mp4" | "gif";
+  /** webm and mov keep transparency (MOV = ProRes 4444), lottie writes a Lottie JSON (beta). */
+  format?: ExportFormat;
+  /** Transparent background for webm/mov/lottie (no canvas color, no texture). */
+  transparent?: boolean;
+  /** Layer ids left out of the export (background areas for overlays). */
+  hide?: string[];
   /** Output height in px (720, 1080, 2160 …). Default: canvas height. */
   height?: number;
   fps?: number;
@@ -29,7 +36,11 @@ export interface RenderOptions {
   onLog?: (line: string) => void;
 }
 
+export type ExportFormat = "mp4" | "gif" | "webm" | "mov" | "lottie";
+
 export interface RenderResult {
+  /** Lottie only: what could not be carried over (code + layer ids). */
+  warnings?: LottieWarning[];
   output: string;
   width: number;
   height: number;
@@ -39,10 +50,39 @@ export interface RenderResult {
 }
 
 const CRF = { high: 16, medium: 21, low: 27 } as const;
+const CRF_WEBM = { high: 20, medium: 28, low: 36 } as const;
+
+/** Lottie JSON: images embedded as data URLs, text placed with the real font metrics. */
+async function renderLottie(spec: MotionSpec, opts: RenderOptions, began: number): Promise<RenderResult> {
+  const images: Record<string, string> = {};
+  const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml" };
+  for (const l of spec.layers) {
+    if (l.type !== "image" || images[l.src] || opts.hide?.includes(l.id)) continue;
+    const file = path.resolve(opts.specDir, l.src);
+    if (!file.startsWith(path.resolve(opts.specDir) + path.sep) || !existsSync(file)) continue;
+    images[l.src] = `data:${mime[path.extname(file).toLowerCase()] ?? "application/octet-stream"};base64,${(await readFile(file)).toString("base64")}`;
+  }
+  const metrics: Record<string, FontMetrics> = {};
+  for (const f of spec.style?.fonts ?? []) {
+    const file = path.resolve(opts.specDir, f.src);
+    if (!file.startsWith(path.resolve(opts.specDir) + path.sep) || !existsSync(file) || metrics[f.family.toLowerCase()]) continue;
+    const m = fontMetrics(await readFile(file));
+    if (m) metrics[f.family.toLowerCase()] = m;
+  }
+  const { json, warnings } = toLottie(spec, { fps: opts.fps ?? spec.canvas.fps, hide: opts.hide, images, fontMetrics: metrics });
+  const output = path.resolve(opts.output);
+  await mkdir(path.dirname(output), { recursive: true });
+  await writeFile(output, JSON.stringify(json));
+  opts.onLog?.(`Lottie: ${(JSON.stringify(json).length / 1024).toFixed(0)} KB, ${warnings.length} Hinweise`);
+  const seconds = Math.round((Date.now() - began) / 100) / 10;
+  return { output, width: spec.canvas.width, height: spec.canvas.height, duration: compositionDuration(spec), seconds, plan: { workers: 0, gpu: false, reason: "Lottie: kein Rendern nötig" }, warnings };
+}
 
 export async function renderVideo(spec: MotionSpec, opts: RenderOptions): Promise<RenderResult> {
   const began = Date.now();
   const format = opts.format ?? "mp4";
+  if (format === "lottie") return renderLottie(spec, opts, began);
+  const alpha = (format === "webm" || format === "mov") && opts.transparent !== false;
   const fps = opts.fps ?? (format === "gif" ? 15 : spec.canvas.fps);
   const targetH = opts.height ?? spec.canvas.height;
   const scale = targetH / spec.canvas.height;
@@ -50,17 +90,18 @@ export async function renderVideo(spec: MotionSpec, opts: RenderOptions): Promis
   const work = await mkdtemp(path.join(os.tmpdir(), "openmotion-"));
   const dir = path.join(work, "composition");
   const cut = await prepareCutAudio(spec, opts.specDir, work);
-  const built = await buildComposition(spec, { specDir: opts.specDir, outDir: dir, scale: sharp ? scale * 2 : scale, ...cut });
-  const raw = path.join(work, format === "gif" ? "raw.gif" : "raw.mp4");
+  const built = await buildComposition(spec, { specDir: opts.specDir, outDir: dir, scale: sharp ? scale * 2 : scale, ...cut, transparent: alpha, hide: opts.hide });
+  const raw = path.join(work, `raw.${format}`);
 
   const plan: RenderPlan = opts.workers
     ? { workers: opts.workers, gpu: false, reason: `fest: ${opts.workers} Worker` }
     : planRender(await detectHardware(), { height: targetH, sharpText: sharp, format });
   opts.onLog?.(`Plan: ${plan.reason}`);
   const args = ["render", dir, "-o", raw, "--fps", String(fps), "--quiet", "--workers", String(plan.workers)];
-  if (plan.gpu) args.push("--gpu");
-  if (format === "gif") args.push("--format", "gif");
-  else args.push("--crf", String(CRF[opts.quality ?? "medium"]));
+  if (plan.gpu && format === "mp4") args.push("--gpu");
+  if (format !== "mp4") args.push("--format", format);
+  // MOV is always ProRes 4444 (fixed quality); GIF has its own palette.
+  if (format === "mp4" || format === "webm") args.push("--crf", String(format === "webm" ? CRF_WEBM[opts.quality ?? "medium"] : CRF[opts.quality ?? "medium"]));
   await run(process.execPath, [hyperframesBin(), ...args], opts.onLog);
 
   const output = path.resolve(opts.output);
@@ -116,8 +157,11 @@ export async function estimate(spec: MotionSpec, opts: Pick<RenderOptions, "heig
   const frames = Math.ceil(compositionDuration(spec) * fps - 1e-6);
   const hw = opts.hardware ?? (await detectHardware());
   const plan = opts.workers ? { workers: opts.workers, gpu: false, reason: `fest: ${opts.workers} Worker` } : planRender(hw, { height, sharpText: opts.sharpText, format: opts.format });
+  if (opts.format === "lottie") return { frames, seconds: 1, calibrated: true, plan: { workers: 0, gpu: false, reason: "Lottie: kein Rendern nötig" }, hardware: hw };
   const est = estimateSeconds(await readStats(opts.statsFile), { frames, height, sharpText: opts.sharpText, workers: plan.workers });
-  return { frames, seconds: est.seconds, calibrated: est.calibrated, plan, hardware: hw };
+  // WebM (VP9) and MOV (ProRes 4444) encode with alpha and are slower than H.264.
+  const slow = opts.format === "webm" ? 1.6 : opts.format === "mov" ? 1.3 : 1;
+  return { frames, seconds: Math.round(est.seconds * slow), calibrated: est.calibrated, plan, hardware: hw };
 }
 
 function hyperframesBin(): string {

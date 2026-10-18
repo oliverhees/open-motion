@@ -23,10 +23,10 @@ export interface Task<T = unknown> { id: string; status: "queued" | "running" | 
 /** Live state of the AI while it works (from the server, translated in the chat). */
 export interface AiProgress { phase: "thinking" | "writing" | "checking" | "retry" | "image" | "review"; text?: string; ops?: number; n?: number; of?: number }
 export interface TranscriptResult { source: string; language?: string; provider: string; words: { id: string; text: string; t0: number; t1: number }[] }
-export interface ExportRequest { format: "mp4" | "gif"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean }
+export interface ExportRequest { format: "mp4" | "gif" | "webm" | "mov" | "lottie"; height: number; fps: number; quality: "high" | "medium" | "low"; sharpText: boolean; transparent?: boolean; hide?: string[] }
 export interface RenderPlan { workers: number; gpu: boolean; reason: string; info?: { cores: number; container: boolean; memGB: number; load: number; limit: "cpu" | "ram" | "cap" | "forced"; gpuName?: string } }
 export interface Estimate { frames: number; seconds: number; calibrated: boolean; plan: RenderPlan }
-export interface Job { id: string; status: "queued" | "running" | "done" | "error"; estimateSeconds: number; plan?: RenderPlan; workerOnline?: boolean; startedAt?: number; finishedAt?: number; file?: string; size?: number; error?: string }
+export interface Job { id: string; status: "queued" | "running" | "done" | "error"; estimateSeconds: number; plan?: RenderPlan; workerOnline?: boolean; startedAt?: number; finishedAt?: number; file?: string; size?: number; error?: string; warnings?: { code: string; layers: string[] }[] }
 
 /** Every request carries x-om: 1 (CSRF protection). A 401 sends the app back to the login screen. */
 async function req<T>(url: string, init?: RequestInit): Promise<T> {

@@ -31,5 +31,8 @@
     "url": "https://github.com/oliverhees/open-motion.git"
   },
   "author": "Oliver Hees – Der Aiianer (https://aiianer.de)",
-  "homepage": "https://github.com/oliverhees/open-motion"
+  "homepage": "https://github.com/oliverhees/open-motion",
+  "devDependencies": {
+    "lottie-web": "5.13.0"
+  }
 }

@@ -241,3 +241,10 @@ select { text-overflow: ellipsis; }
 .integ { display: grid; gap: 3px; margin-top: 8px; font-size: 12px; }
 .integ .ok { color: var(--ok); }
 .integ .warn { color: var(--key); }
+
+/* Export: five formats wrap on narrow dialogs; background layer checklist */
+.seg.fmts { flex-wrap: wrap; min-width: 260px; }
+.seg.fmts button { flex: 1 1 auto; padding: 5px 10px; white-space: nowrap; }
+.hidelist { display: grid; gap: 4px; min-width: 200px; }
+.hidelist label.check { display: flex; gap: 6px; align-items: center; }
+.hidelist label.check input { width: auto; }

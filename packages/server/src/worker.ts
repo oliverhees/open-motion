@@ -68,7 +68,7 @@ async function doExport(job: QueueJob<{ projectId: string; spec: MotionSpec; req
   const opts: RenderOptions = { specDir: dir, output: path.join(dir, "renders", name), ...request, statsFile };
   const r = await renderVideo(spec, opts);
   await queue.update(job.id, { plan: r.plan });
-  return { file: `renders/${name}`, size: statSync(opts.output).size, plan: r.plan };
+  return { file: `renders/${name}`, size: statSync(opts.output).size, plan: r.plan, ...(r.warnings?.length ? { warnings: r.warnings } : {}) };
 }
 
 async function doTranscribe(job: QueueJob<{ projectId: string; source: string; provider?: Provider; language?: string; model?: string }>, dataDir: string, s: Awaited<ReturnType<SettingsStore["read"]>>) {
